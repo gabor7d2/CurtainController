@@ -20,9 +20,9 @@
 /// INIT
 //////////////////////////////////////////////////////////////////////////
 
-void uart_putchar(char c, FILE *stream);
+void printf_putchar(char c, FILE *stream);
 
-static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+static FILE mystdout = FDEV_SETUP_STREAM(printf_putchar, NULL, _FDEV_SETUP_WRITE);
 
 /**
 Initializes the serial communication, sets up USART0 to receive and send mode
@@ -88,38 +88,14 @@ char Serial_Read() {
 /// DATA SEND
 //////////////////////////////////////////////////////////////////////////
 
-char sendBuf[64];
-unsigned char idxS0 = 0, idxS1 = 0;
-bool unsent = false;
-
-/**
-Interrupt vector to handle sending the next byte when the USART data register (UDR) becomes empty.
-*/
-ISR(USART0_UDRE_vect) {
-	if (idxS1 > 63) idxS1 = 0;
-	if (idxS0 != idxS1) {
-		UDR0 = sendBuf[idxS1++];
-	} else {
-		// finished with sending data, need to disable DRE interrupts
-		clear_bit(UCSR0B, UDRIE0);
-		unsent = false;
-	}
-}
-
 void Serial_PrintChar(char c) {
-	if (idxS0 > 63) idxS0 = 0;
-	sendBuf[idxS0++] = c;
 	
-	if (!unsent) {
-		// nothing is pending to send, so we have to enable the DRE interrupt,
-		// and because UDRE is already set (since it has finished sending), the interrupt vector will be executed immediately
-		set_bit(UCSR0B, UDRIE0);
-	}
-	// else we don't have to do anything, as soon as the UDR will be empty,
-	// the interrupt will send the next character.
+	// wait until USART data register becomes empty.
+	while (bit_is_clear(UCSR0A, UDRE0));
+	UDR0 = c;
 }
 
-void uart_putchar(char c, FILE *stream) {
+void printf_putchar(char c, FILE *stream) {
 	Serial_PrintChar(c);
 }
 
@@ -128,7 +104,7 @@ void uart_putchar(char c, FILE *stream) {
 */
 void Serial_PrintString(const char *s) {
 	while (*s) {
-		if (*s == '\n') putchr('\r');
+		if (*s == '\n') Serial_PrintChar('\r');
 		Serial_PrintChar(*s++);
 	}
 }

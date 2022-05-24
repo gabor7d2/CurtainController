@@ -48,7 +48,7 @@ void btnChange() {
 		//eeprom_write_word(0, sec);
 		// enable drv8825
 		//Motor_Enable();
-		printf("SAVE");
+		printf("SAVE\n");
 	}
 	
 	if (!(PIND & 0x40) && (prevPIND & 0x40)) {
@@ -57,7 +57,7 @@ void btnChange() {
 		//sec = eeprom_read_word(0);
 		// disable drv8825
 		//Motor_Disable();
-		printf("RESTORE");
+		printf("RESTORE\n");
 	}
 	
 	if (!(PIND & 0x80) && (prevPIND & 0x80)) {
@@ -65,7 +65,7 @@ void btnChange() {
 		//LCD_String_xy("RESET   ", 1, 0);
 		//sec = 0;
 		//Motor_ReverseDir();
-		printf("RESET");
+		printf("RESET\n");
 	}
 	
 	prevPIND = PIND;

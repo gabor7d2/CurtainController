@@ -5,6 +5,16 @@
 *  Author: gabor
 */
 
+//////////////////////////////////////////////////////////////////////////
+/// 
+/// Two-way serial communication module using UART0
+///
+/// Registers a custom stream for stdout, so that printf calls can be used
+/// to send messages directly through serial.
+///
+/// Call Serial_Init() before using this module.
+///
+//////////////////////////////////////////////////////////////////////////
 
 #ifndef SERIAL_H_
 #define SERIAL_H_
@@ -22,11 +32,11 @@
 
 void printf_putchar(char c, FILE *stream);
 
-static FILE mystdout = FDEV_SETUP_STREAM(printf_putchar, NULL, _FDEV_SETUP_WRITE);
+static FILE mystdout = FDEV_SETUP_STREAM(&printf_putchar, NULL, _FDEV_SETUP_WRITE);
 
 /**
-Initializes the serial communication, sets up USART0 to receive and send mode
-and sets up stdout so that printf functions can write directly to serial.
+* Initializes the serial communication, sets up USART0 to receive and send mode
+* and sets up stdout so that printf functions can write directly to serial.
 */
 void Serial_Init(unsigned int baud) {
 	// set baud rate
@@ -52,7 +62,7 @@ unsigned char idxR0 = 0, idxR1 = 0;
 bool unread = false;
 
 /**
-Interrupt vector to handle received bytes.
+* Interrupt vector to handle received bytes.
 */
 ISR(USART0_RX_vect) {
 	if (bit_is_clear(UCSR0A, FE0)) {
@@ -64,14 +74,14 @@ ISR(USART0_RX_vect) {
 }
 
 /**
-Get if there is any unread data.
+* Gets if there is any unread data.
 */
-bool Serial_Has_Unread() {
+bool Serial_HasUnread() {
 	return unread;
 }
 
 /**
-Reads the first unread byte, or returns -1 if no unread data is available.
+* Reads the first unread byte, or returns -1 if no unread data is available.
 */
 char Serial_Read() {
 	if (idxR1 > 63) idxR1 = 0;
@@ -88,6 +98,10 @@ char Serial_Read() {
 /// DATA SEND
 //////////////////////////////////////////////////////////////////////////
 
+/**
+* Sends one byte of data through the serial port (UART0).
+* Waits until the port has finished sending the previous byte, and then sends it.
+*/
 void Serial_PrintChar(char c) {
 	
 	// wait until USART data register becomes empty.
@@ -95,18 +109,9 @@ void Serial_PrintChar(char c) {
 	UDR0 = c;
 }
 
+// Helper function for registering the UART0 port as stdout stream.
 void printf_putchar(char c, FILE *stream) {
 	Serial_PrintChar(c);
-}
-
-/*
-* Send a C (NUL-terminated) string down the UART Tx.
-*/
-void Serial_PrintString(const char *s) {
-	while (*s) {
-		if (*s == '\n') Serial_PrintChar('\r');
-		Serial_PrintChar(*s++);
-	}
 }
 
 #endif /* SERIAL_H_ */

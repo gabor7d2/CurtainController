@@ -18,6 +18,10 @@
 #include "drv8825.h"
 #include "serial.h"
 #include "buttons.h"
+#include "rtc3231.h"
+
+typedef struct rtc_time rtc_time;
+typedef struct rtc_date rtc_date;
 
 int sec = 0;
 
@@ -75,6 +79,17 @@ void start_timers() {
 
 void button1_changed(bool pressed) {
 	if (pressed) {
+		rtc_time t;
+		rtc_date d;
+		rtc3231_read_datetime(&t, &d);
+		char ch[17];
+		
+		sprintf(ch, "20%02d. %02d. %02d. %d", d.year, d.month, d.day, d.wday);
+		LCD_PrintStringAt(ch, 0, 0);
+		
+		sprintf(ch, "%02d:%02d:%02d", t.hour, t.min, t.sec);
+		LCD_PrintStringAt(ch, 1, 0);
+		
 		printf("BTN1 pressed\n");
 		} else {
 		printf("BTN1 released\n");
@@ -83,6 +98,18 @@ void button1_changed(bool pressed) {
 
 void button2_changed(bool pressed) {
 	if (pressed) {
+		rtc_date d;
+		d.year = 22;
+		d.month = 5;
+		d.day = 25;
+		rtc_time t;
+		t.hour = 2;
+		t.min = 33;
+		t.sec = 0;
+		
+		rtc3231_write_date(&d);
+		rtc3231_write_time(&t);
+		
 		printf("BTN2 pressed\n");
 		} else {
 		printf("BTN2 released\n");
@@ -104,6 +131,8 @@ int main()
 	Buttons_Init();
 	Motor_Init();
 	Motor_SetSpeed(1.5);
+	
+	rtc3231_init();
 	
 	start_timers();
 	

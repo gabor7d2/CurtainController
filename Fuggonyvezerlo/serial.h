@@ -32,7 +32,7 @@
 
 void printf_putchar(char c, FILE *stream);
 
-static FILE mystdout = FDEV_SETUP_STREAM(&printf_putchar, NULL, _FDEV_SETUP_WRITE);
+static FILE mystdout = FDEV_SETUP_STREAM(printf_putchar, NULL, _FDEV_SETUP_WRITE);
 
 /**
 * Initializes the serial communication, sets up USART0 to receive and send mode

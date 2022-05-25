@@ -12,6 +12,6 @@
 
 #define set_bit(sfr, bit) (sfr |= _BV(bit))
 
-#define clear_bit(sfr, bit) (sfr &= !(_BV(bit)))
+#define clear_bit(sfr, bit) (sfr &= ~(_BV(bit)))
 
 #endif /* UTILS_H_ */

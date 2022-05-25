@@ -14,6 +14,10 @@
 /// Uses the specified port bits of the specified port for the board's
 /// Enable, Step and Direction signals.
 ///
+/// Automatically steps the motor with the set speed, using TIMER4.
+/// Using a timer and interrupts for stepping makes sure that the motor's
+/// speed is always constant and accurate.
+///
 /// Call Motor_Init() before using this module.
 ///
 //////////////////////////////////////////////////////////////////////////
@@ -32,12 +36,15 @@
 #define Motor_STEP  PD3			// DRV8825 step pin
 #define Motor_DIR	PD2			// DRV8825 dir pin
 
-int delayUs = 10000;
+uint16_t timerSpeed = 37500;
+
+void Motor_SetSpeed(double rpm);
+void Motor_Step();
 
 /**
-* Initialize motor pins and disable motor.
+* Initialize motor pins, set motor speed and disable motor.
 */
-void Motor_Init() {
+void Motor_Init(double rpm) {
 	// Set direction as output
 	set_bit(Motor_Dir, Motor_EN);
 	set_bit(Motor_Dir, Motor_STEP);
@@ -45,6 +52,29 @@ void Motor_Init() {
 	
 	// Disable motor
 	set_bit(Motor_Port, Motor_EN);
+	
+	// Setup TIMER 4: 16-bit, /64 prescaler, timer will be dynamically adjustable.
+	TCCR4A = 0;				// Disconnect OC4A/OC4B pins, set WGM4[1:0] to 0
+	TCCR4B = 0b00001011;	// set WGM4[3:2] to 01 (count upto the value in OCR4A), set prescaler to 64
+	TCNT4 = 0;				// clear timer
+	TIMSK4 = 0b00000010;	// enable interrupt when TCNT4 == OCR4A
+	// https://eleccelerator.com/avr-timer-calculator/
+	
+	// Set motor speed
+	Motor_SetSpeed(rpm);
+}
+
+// Only do stepping every 2 timer ticks
+bool step = true;
+
+/**
+* Interrupt vector to automatically step the motor.
+*/
+ISR(TIMER4_COMPA_vect) {
+	if (step) {
+		Motor_Step();
+	}
+	step = !step;
 }
 
 /**
@@ -88,23 +118,25 @@ void Motor_ReverseDir() {
 }
 
 /**
-* Set relative motor speed.
+* Set motor speed using rpm value.
 */
-void Motor_SetSpeed(double speed) {
-	delayUs = 10000 / speed;
+void Motor_SetSpeed(double rpm) {
+	if (rpm <= 0) rpm = 1;
+	if (rpm > 1000) rpm = 1000;
+	timerSpeed = (uint16_t) (37500 / rpm);
+	OCR4A = timerSpeed;
 }
 
 /**
 * Do one step of the motor, if it is enabled.
-* Should be called in the main loop continuously.
 */
 void Motor_Step() {
 	if (!Motor_IsEnabled()) return;
 	
 	set_bit(Motor_Port, Motor_STEP);
-	_delay_us(delayUs);
+	_delay_us(100);
 	clear_bit(Motor_Port, Motor_STEP);
-	_delay_us(delayUs);
+	_delay_us(100);
 }
 
 #endif

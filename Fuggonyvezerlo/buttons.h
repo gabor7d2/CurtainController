@@ -9,11 +9,11 @@
 ///
 /// Buttons module
 ///
-/// Polls the buttons every 5 ms with TIMER3, and adds the detected
+/// Polls the buttons every 10 ms with TIMER3, and adds the detected
 /// button change events to a queue which can then be processed in 
 /// the main loop of the program.
 ///
-/// The 5 ms polling interval takes care of debouncing the switch too.
+/// The 10 ms polling interval takes care of debouncing the switch too.
 ///
 /// Call Buttons_Init() before using this module.
 ///
@@ -28,7 +28,7 @@
 #define BTN1_Dir	DDRD		// Button 1 data direction register
 #define BTN1_Pin	PIND		// Button 1 input pin register
 #define BTN1_Port	PORTD		// Button 1 output port register
-#define BTN1		PD5			// Button 1 pin
+#define BTN1		PD7			// Button 1 pin
 
 #define BTN2_Dir	DDRD		// Button 2 data direction register
 #define BTN2_Pin	PIND		// Button 2 input pin register
@@ -38,7 +38,7 @@
 #define BTN3_Dir	DDRD		// Button 3 data direction register
 #define BTN3_Pin	PIND		// Button 3 input pin register
 #define BTN3_Port	PORTD		// Button 3 output port register
-#define BTN3		PD7			// Button 3 pin
+#define BTN3		PD5			// Button 3 pin
 
 /**
 * Initializes the button control logic.
@@ -54,11 +54,11 @@ void Buttons_Init() {
 	set_bit(BTN2_Port, BTN2);
 	set_bit(BTN3_Port, BTN3);
 	
-	// Setup TIMER 3: 16-bit, count upto 1250 with /64 prescaler = reset every 5ms
+	// Setup TIMER 3: 16-bit, count upto 1250 with /64 prescaler = reset every 10ms
 	TCCR3A = 0;				// Disconnect OC3A/OC3B pins, set WGM3[1:0] to 0
 	TCCR3B = 0b00001011;	// set WGM3[3:2] to 01 (count upto the value in OCR3A), set prescaler to 64
 	TCNT3 = 0;				// clear timer
-	OCR3A = 1250;			// set top value to count upto
+	OCR3A = 2500;			// set top value to count upto
 	TIMSK3 = 0b00000010;	// enable interrupt when TCNT3 == OCR3A
 	// https://eleccelerator.com/avr-timer-calculator/
 }
@@ -69,7 +69,7 @@ BtnChange btnChangeQueue[10];
 unsigned char idx0 = 0, idx1 = 0;
 
 /**
-* Runs every 5 ms, adds button pin changes to the queue
+* Runs every 10 ms, adds button pin changes to the queue
 */
 ISR(TIMER3_COMPA_vect) {
 	if (bit_is_clear(BTN1_Pin, BTN1) != btn1) {

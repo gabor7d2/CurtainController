@@ -15,6 +15,7 @@
 //////////////////////////////////////////////////////////////////////////
 /// ATmega328PB specific remaps
 //////////////////////////////////////////////////////////////////////////
+#define TWSR TWSR0
 #define TWBR TWBR0
 #define TWCR TWCR0
 #define TWDR TWDR0
@@ -26,7 +27,7 @@
 /*
  * Init lib
  */
-void i2c_init(void);
+void i2c_init(uint16_t scl_freq_khz);
 
 /*
  * Start sending data

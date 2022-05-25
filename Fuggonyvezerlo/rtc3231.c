@@ -45,7 +45,7 @@ static unsigned char bin(unsigned char dec)
 
 void rtc3231_init(void)
 {
-	i2c_init();
+	i2c_init(400);
 	i2c_start_condition();
 	i2c_send_byte(RTC_WADDR);
 	i2c_send_byte(0x0E);

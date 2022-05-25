@@ -12,9 +12,10 @@
 #include "i2c.h"
 
 
-void i2c_init(void)
+void i2c_init(uint16_t scl_freq_khz)
 {
-	TWBR = 0xFF;
+	TWBR = (8000 / scl_freq_khz) - 8;
+	TWSR &= 0x03;
 }
 
 void i2c_start_condition(void)

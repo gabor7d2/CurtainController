@@ -100,7 +100,7 @@ void LCD_Init()
 	LCD_SendCommand(0b00001110);	// Set display=on, cursor=off
 	LCD_SendCommand(0x06);			// Enable Increment cursor
 	LCD_SendCommand(0x01);			// Clear screen
-	_delay_ms(2);
+	_delay_ms(10);
 }
 
 /**

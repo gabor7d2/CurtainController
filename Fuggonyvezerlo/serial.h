@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include "utils.h"
 
+#define SERIAL_RECEIVE_BUFFER_SIZE 64
+
 //////////////////////////////////////////////////////////////////////////
 /// INIT
 //////////////////////////////////////////////////////////////////////////
@@ -57,7 +59,7 @@ void Serial_Init(unsigned int baud) {
 /// DATA RECEIVE
 //////////////////////////////////////////////////////////////////////////
 
-char recvBuf[64];
+char recvBuf[SERIAL_RECEIVE_BUFFER_SIZE];
 unsigned char idxR0 = 0, idxR1 = 0;
 bool unread = false;
 
@@ -66,7 +68,7 @@ bool unread = false;
 */
 ISR(USART0_RX_vect) {
 	if (bit_is_clear(UCSR0A, FE0)) {
-		if (idxR0 > 63) idxR0 = 0;
+		if (idxR0 >= SERIAL_RECEIVE_BUFFER_SIZE) idxR0 = 0;
 		uint8_t c = UDR0;
 		recvBuf[idxR0++] = c;
 		unread = true;
@@ -84,7 +86,7 @@ bool Serial_HasUnread() {
 * Reads the first unread byte, or returns -1 if no unread data is available.
 */
 char Serial_Read() {
-	if (idxR1 > 63) idxR1 = 0;
+	if (idxR1 >= SERIAL_RECEIVE_BUFFER_SIZE) idxR1 = 0;
 	if (unread) {
 		char c = recvBuf[idxR1++];
 		if (idxR0 == idxR1) unread = false;

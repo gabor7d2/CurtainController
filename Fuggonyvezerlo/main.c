@@ -14,193 +14,222 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <string.h>
 #include "display.h"
 #include "drv8825.h"
 #include "serial.h"
 #include "buttons.h"
 #include "rtc3231.h"
+#include "scheduler.h"
 
-typedef struct rtc_time rtc_time;
-typedef struct rtc_date rtc_date;
+void close_curtains();
 
-int sec = 0;
+void open_curtains();
 
-// Runs every 1s
-ISR(TIMER1_COMPA_vect) {
-	sec++;
-	//printf("%d\n", sec);
-	/*char s[10];
-	sprintf(s,"%d    ", sec);
-	LCD_String_xy(s, 0, 0);
-	Serial_PrintString(s);*/
-}
+void stop_curtains();
 
-/*void btnChange() {
-if (!(PIND & 0x20) && (prevPIND & 0x20)) {
-// D5 button pressed
-//LCD_String_xy("SAVE    ", 1, 0);
-//eeprom_write_word(0, sec);
-// enable drv8825
-//Motor_Enable();
-printf("SAVE\n");
-}
+#include "menu.h"
 
-if (!(PIND & 0x40) && (prevPIND & 0x40)) {
-// D6 button pressed
-//LCD_String_xy("RESTORE", 1, 0);
-//sec = eeprom_read_word(0);
-// disable drv8825
-//Motor_Disable();
-printf("RESTORE\n");
-}
+SharedData sharedData = { .state = 0, .running = false, .direction = false };
 
-if (!(PIND & 0x80) && (prevPIND & 0x80)) {
-// D7 button pressed
-//LCD_String_xy("RESET   ", 1, 0);
-//sec = 0;
-//Motor_ReverseDir();
-printf("RESET\n");
-}
-
-prevPIND = PIND;
-}*/
-
-void start_timers() {
-	// Setup TIMER 1: 16-bit, count upto 15625 with /1024 prescaler = reset every 1s
-	TCCR1A = 0;				// Disconnect OC1A/OC1B pins, set WGM1[1:0] to 0
-	TCCR1B = 0b00001101;	// set WGM1[3:2] to 01 (count upto the value in OCR1A), set prescaler to 1024
-	TCNT1 = 0;				// clear timer
-	OCR1A = 15625;			// set top value to count upto
-	TIMSK1 = 0b00000010;	// enable interrupt when TCNT1 == OCR1A
-	// https://eleccelerator.com/avr-timer-calculator/
-}
-
-uint16_t rpm = 1;
-
-void button1_changed(bool pressed) {
-	if (pressed) {
-		rpm--;
-		if (rpm < 1) rpm = 1;
-		Motor_SetSpeed(rpm);
-		
-		char ch[5];
-		sprintf(ch, "%d", rpm);
-		LCD_Clear();
-		LCD_PrintString(ch);
-		
-		printf("BTN1 pressed\n");
-		} else {
-		printf("BTN1 released\n");
+void button_change_handler(BtnChange change) {
+	// Delegate button change to Menu if motor is not running
+	if (!sharedData.running) {
+		Menu_ProcessButtonChange(change);
+		return;
+	}
+	
+	switch (change.id) {
+		case 1:
+		if (change.pressed) {
+			open_curtains();
+		}
+		break;
+		case 2:
+		if (change.pressed) {
+			stop_curtains();
+		}
+		break;
+		case 3:
+		if (change.pressed) {
+			close_curtains();
+		}
+		break;
 	}
 }
 
-void button2_changed(bool pressed) {
-	if (pressed) {
-		rtc_time t;
-		rtc_date d;
-		rtc3231_read_datetime(&t, &d);
-		char ch[17];
-		
-		sprintf(ch, "20%02d. %02d. %02d. %d", d.year, d.month, d.day, d.wday);
-		LCD_PrintStringAt(ch, 0, 0);
-		
-		sprintf(ch, "%02d:%02d:%02d", t.hour, t.min, t.sec);
-		LCD_PrintStringAt(ch, 1, 0);
-		
-		//Motor_ReverseDir();
-		if (Motor_IsEnabled()) {
-			Motor_Disable();
-		} else Motor_Enable();
-		
-		/*rtc_date d;
-		d.year = 22;
-		d.month = 5;
-		d.day = 25;
-		rtc_time t;
-		t.hour = 2;
-		t.min = 33;
-		t.sec = 0;
-		
-		rtc3231_write_date(&d);
-		rtc3231_write_time(&t);*/
-		
-		printf("BTN2 pressed\n");
-		} else {
-		printf("BTN2 released\n");
-	}
+bool request_time_from_rtc() {
+	rtc_date date;
+	rtc3231_read_datetime(&(sharedData.currTime), &date);
+	sharedData.currDay = date.wday;
+	
+	// keep running
+	return true;
 }
 
-void button3_changed(bool pressed) {
-	if (pressed) {
-		rpm++;
-		if (rpm > 1000) rpm = 1000;
-		Motor_SetSpeed(rpm);
-		
-		char ch[5];
-		sprintf(ch, "%d", rpm);
-		LCD_Clear();
-		LCD_PrintString(ch);
-		
-		printf("BTN3 pressed\n");
-		} else {
-		printf("BTN3 released\n");
-	}
+void close_curtains() {
+	data->running = true;
+	data->direction = false;
+	Motor_SetDir(false);
+	Motor_Enable();
+	
+	LCD_PrintStringAt("CLOSING...      ", 0, 0);
+	LCD_PrintStringAt("\x7f" "\x7e" "    stop    " "\x7e" "\x7f", 1, 0);
+}
+
+void open_curtains() {
+	data->running = true;
+	data->direction = true;
+	Motor_SetDir(true);
+	Motor_Enable();
+	
+	LCD_PrintStringAt("OPENING...      ", 0, 0);
+	LCD_PrintStringAt("\x7f" "\x7e" "    stop    " "\x7e" "\x7f", 1, 0);
+}
+
+void stop_curtains() {
+	data->running = false;
+	Motor_Disable();
+}
+
+uint8_t hour, min, day;
+char serialMode = 0;
+
+void process_serial_input(char * line) {
+    if (serialMode == 0) {
+        if (strcmp(line, "open") == 0) {
+            open_curtains();
+            printf("\r\nOpening curtains..\r\n");
+        } else if (strcmp(line, "close") == 0) {
+            close_curtains();
+            printf("\r\nClosing curtains..\r\n");
+        } else if (strcmp(line, "stop") == 0) {
+            stop_curtains();
+            printf("\r\nCurtains stopped!\r\n");
+        } else if (strcmp(line, "gettime") == 0) {
+            printf("\r\nCurrent time: %2d:%02d %s\r\n", data -> currTime.hour, data -> currTime.min, DayOfWeekToStr(data -> currDay));
+        } else if (strcmp(line, "settime") == 0) {
+            printf("\r\nEnter hour (0-23): ");
+            serialMode = 1;
+        } else if (strcmp(line, "getschedule") == 0) {
+            if (data -> tempSchedule.hour != 255) {
+                printf("\r\nScheduled: %s @ %2d:%02d %s\r\n", (data -> tempSchedule.daysAndType & 0x80) ? "open" : "close", data -> tempSchedule.hour, data -> tempSchedule.min, DayOfWeekToStr(calcNextDay()));
+            } else {
+                printf("\r\nNo schedule is set.\r\n");
+            }
+        } else if (strcmp(line, "delschedule") == 0) {
+            data -> tempSchedule.hour = 255;
+            data -> tempSchedule.min = 0;
+            data -> tempSchedule.daysAndType = 0;
+            eeprom_write_byte(0x12, 0);
+            eeprom_write_byte(0x13, 255);
+            eeprom_write_byte(0x14, 0);
+            printf("\r\nSchedule deleted!\r\n");
+        } else {
+            printf("\r\nUnknown command.\r\n");
+        }
+    } else if (serialMode == 1) {
+        sscanf(line, "%d", & hour);
+        if (hour > 23) {
+            printf("\r\nEntered number is too big!\r\nEnter hour (0-23): ");
+        } else {
+            printf("\r\nEnter minutes (0-59): ");
+            serialMode = 2;
+        }
+    } else if (serialMode == 2) {
+        sscanf(line, "%d", & min);
+        if (min > 59) {
+            printf("\r\nEntered number is too big!\r\nEnter minutes (0-59): ");
+        } else {
+            printf("\r\nEnter day of week (0-6): ");
+            serialMode = 3;
+        }
+    } else if (serialMode == 3) {
+        sscanf(line, "%d", & day);
+        if (day > 6) {
+            printf("\r\nEntered number is too big!\r\nEnter day of week (0-6): ");
+        } else {
+            rtc_time t = {
+                0,
+                min,
+                hour
+            };
+            rtc3231_write_time( & t);
+            rtc_date d = {
+                day,
+                0,
+                0,
+                0
+            };
+            rtc3231_write_date( & d);
+            printf("\r\nTime set to: %2d:%02d %s\r\n", hour, min, DayOfWeekToStr(day));
+
+            serialMode = 0;
+        }
+    }
 }
 
 int main()
 {
-	Serial_Init(9600);
+	// init modules
+	Scheduler_Init();
 	LCD_Init();
-	Buttons_Init();
+	Buttons_Init(button_change_handler);
 	Motor_Init(35);
-	
-	clear_bit(DDRC, PC0);
-	clear_bit(DDRC, PC1);
-	set_bit(PORTC, PC0);
-	set_bit(PORTC, PC1);
-	
-	//Motor_Enable();
-	
+	Serial_Init(9600);
 	rtc3231_init();
 	
-	start_timers();
+	Task t = { .id = 0, .freq = 100, .func = request_time_from_rtc};
+	Scheduler_Schedule(t);
+	
+	// set reed switch pins as input
+	clear_bit(DDRC, PC0);
+	clear_bit(DDRC, PC1);
+	// enable reed switch pullup resistors
+	set_bit(PORTC, PC0);
+	set_bit(PORTC, PC1);
 	
 	// enable global interrupts
 	sei();
 	
-	/*uint16_t t1 = TCNT1;
-	LCD_PrintChar('a');
-	uint16_t t2 = TCNT1;
-	printf("LCD print: t1 = %d, t2 = %d\n", t1, t2);*/
+	Menu_Init(&sharedData);
+	
+	char char_line[64];
+	char lineidx = 0;
+	bool hasNewLine = false;
 	
 	while (1) {
-		int x = 0, y = 0;
-		char c;
+		Buttons_ProcessButtonChanges();
+		Scheduler_ProcessTasks();
+		
+		if (bit_is_clear(PINC, PC0) && sharedData.running && !sharedData.direction) {
+			stop_curtains();
+		}
+		
+		if (bit_is_clear(PINC, PC1) && sharedData.running && sharedData.direction) {
+			stop_curtains();
+		}
+		
+		if (sharedData.currTime.sec == 0 && sharedData.currTime.hour == sharedData.tempSchedule.hour && sharedData.currTime.min == sharedData.tempSchedule.min && (sharedData.tempSchedule.daysAndType & (1 << sharedData.currDay))) {
+			if (sharedData.tempSchedule.daysAndType & (1 << 7)) open_curtains();
+			else close_curtains();
+		}
+		
 		while (Serial_HasUnread()) {
-			if (x > 15) {
-				x = 0;
-				y++;
+			char c = Serial_Read();
+			if (c == '\r') continue;
+			if (c == '\n') {
+				hasNewLine = true;
+				char_line[lineidx++] = '\0';
+				break;
 			}
-			c = Serial_Read();
-			if (c == '\n' || c == '\r') continue;
-			LCD_PrintCharAt(c, y, x);
-			x++;
+			char_line[lineidx++] = c;
 		}
 		
-		if (bit_is_clear(PINC, PC0)) {
-			LCD_PrintChar('A');
-		}
-		
-		if (bit_is_clear(PINC, PC1)) {
-			LCD_PrintChar('B');
-		}
-		
-		while (Buttons_HasUnprocessedChange()) {
-			//t1 = TCNT1;
-			Buttons_ProcessChange(button1_changed, button2_changed, button3_changed);
-			//t2 = TCNT1;
-			//printf("Btn change processed: t1 = %d, t2 = %d\n", t1, t2);
-			//LCD_PrintChar('a');
+		if (hasNewLine) {
+			process_serial_input(char_line);
+			hasNewLine = false;
+			lineidx = 0;
 		}
 	}
 }

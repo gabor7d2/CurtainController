@@ -15,24 +15,25 @@
 #define __DS3231_H__
 
 #include <stdio.h>
+#include <avr/sfr_defs.h>
 
 #define RTC_WADDR 0b11010000
 #define RTC_RADDR 0b11010001
 
-struct rtc_time
+typedef struct rtc_time
 {
 	uint8_t sec;
 	uint8_t min;
 	uint8_t hour;
-};
+} rtc_time;
 
-struct rtc_date
+typedef struct rtc_date
 {
 	uint8_t wday;
 	uint8_t day;
 	uint8_t month;
 	uint8_t year;
-};
+} rtc_date;
 
 /*
  * Clock initialization

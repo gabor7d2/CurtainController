@@ -119,7 +119,7 @@ void TaskScheduler_Deschedule(uint8_t id) {
 }
 
 /**
- * Process tasks on the queue. Should be called continuously from the Main loop.
+ * Process tasks on the queue. Should be called continuously from the main loop.
  */
 void TaskScheduler_ProcessTasks() {
 	// go through task queue

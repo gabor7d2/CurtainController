@@ -9,13 +9,12 @@
 ///
 /// Buttons module
 ///
-/// Polls the buttons every 50 ms with TIMER3, and adds the detected
-/// button change events to a queue which can then be processed in 
-/// the main loop of the program.
+/// Polls the buttons every 25 ms with TaskScheduler, and saves the new
+/// button states and changes.
 ///
-/// The 50 ms polling interval takes care of debouncing the switch too.
-///
-/// Call Buttons_Init() before using this module.
+/// The 25 ms polling interval takes care of debouncing the switch too.
+/// 
+/// Call TaskScheduler_Init() and Buttons_Init() (in this order) before using this module.
 ///
 //////////////////////////////////////////////////////////////////////////
 
@@ -42,8 +41,6 @@
 #define BTN3_Port	PORTD		// Button 3 output port register
 #define BTN3		PD5			// Button 3 pin
 
-#define BUTTONS_CHANGE_QUEUE_SIZE 10
-
 void (*btn_change_handler)(uint8_t id, bool pressed);
 
 bool Buttons_UpdateButtonStates(uint8_t id);
@@ -64,9 +61,12 @@ void Buttons_Init(void (*handler)(uint8_t id, bool pressed)) {
     set_bit(BTN1_Port, BTN1);
     set_bit(BTN2_Port, BTN2);
     set_bit(BTN3_Port, BTN3);
-
-    Task t = {.id = 1, .period = 50, .func = Buttons_UpdateButtonStates};
+    
+    Task t = {.id = 10, .period = 25, .func = Buttons_UpdateButtonStates};
     TaskScheduler_Schedule(t);
+    
+//    Task t2 = {.id = 11, .period = 0, .func =  };
+//    TaskScheduler_Schedule(t2);
 }
 
 // latest state of buttons
@@ -75,23 +75,23 @@ volatile bool btn1 = false, btn2 = false, btn3 = false;
 volatile bool chgbtn1 = false, chgbtn2 = false, chgbtn3 = false;
 
 /*
- * Function that gets called every 50 ms by the TaskScheduler to update button states.
+ * Function that gets called every 25 ms by the TaskScheduler to update button states.
  */
 bool Buttons_UpdateButtonStates(uint8_t id) {
-	if (bit_is_clear(BTN1_Pin, BTN1) != btn1) {
-		btn1 = !btn1;
+    if (bit_is_clear(BTN1_Pin, BTN1) != btn1) {
+        btn1 = !btn1;
         chgbtn1 = true;
-	}
-    
-	if (bit_is_clear(BTN2_Pin, BTN2) != btn2) {
-		btn2 = !btn2;
+    }
+
+    if (bit_is_clear(BTN2_Pin, BTN2) != btn2) {
+        btn2 = !btn2;
         chgbtn2 = true;
-	}
-    
-	if (bit_is_clear(BTN3_Pin, BTN3) != btn3) {
-		btn3 = !btn3;
+    }
+
+    if (bit_is_clear(BTN3_Pin, BTN3) != btn3) {
+        btn3 = !btn3;
         chgbtn3 = true;
-	}
+    }
 
     // keep task running
     return true;

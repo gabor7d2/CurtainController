@@ -37,7 +37,7 @@
 typedef struct Task {
     // Id of the task
 	uint8_t id;
-    // Period of the task, the task will be run every period * 1ms
+    // Period of the task, the task will be run every period * 1ms, if 0, the task will be run as soon as possible
 	uint16_t period;
     // What function to call, the function receives the task id as a parameter
     // and should return a boolean that determines if the task should be kept running (0 == deactivate, 1 == keep running)
@@ -75,11 +75,11 @@ void TaskScheduler_Init() {
 /**
 * Interrupt vector to queue due tasks, runs every 1 ms.
 */
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER0_COMPA_vect) {
 	// go through all tasks that are active (id != 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
-		if (tasks[i].id != 255) {
+		if (tasks[i].id != 255 && tasks[i].period != 0) {
 			// if the time specified in the task has elapsed
 			if (counter % tasks[i].period == 0) {
 				if (taskidx0 >= SCHEDULER_TASK_QUEUE_SIZE) taskidx0 = 0;
@@ -92,17 +92,19 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 /**
- * Schedule the specified task.
+ * Schedule the specified task. Returns true if the task was scheduled,
+ * and false if there was no room for the task.
  */
-void TaskScheduler_Schedule(Task t) {
+bool TaskScheduler_Schedule(Task t) {
 	// search for the first task that is not active (id == 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
 		if (tasks[i].id == 255) {
 			tasks[i] = t;
-			break;
+			return true;
 		}
 	}
+    return false;
 }
 
 /**
@@ -130,6 +132,15 @@ void TaskScheduler_ProcessTasks() {
 		bool ret = taskQueue[taskidx1]->func(taskQueue[taskidx1]->id);
 		if (!ret) taskQueue[taskidx1]->id = 255;
 		taskidx1++;
+	}
+    
+    // Go through immediate tasks
+    for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
+	{
+		if (tasks[i].id != 255 && tasks[i].period == 0) {
+            bool ret = tasks[i].func(tasks[i].id);
+            if (!ret) tasks[i].id = 255;
+		}
 	}
 }
 

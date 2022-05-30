@@ -10,25 +10,26 @@
 
 #include <avr/sfr_defs.h>
 #include <stdbool.h>
-#include "rtc3231.h"
 
 #define set_bit(sfr, bit) (sfr |= _BV(bit))
 
 #define clear_bit(sfr, bit) (sfr &= ~(_BV(bit)))
 
+/**
+ * Stores a curtain closing/opening schedule.
+ */
 typedef struct CurtainSchedule {
-	uint8_t daysAndType, hour, min;
+    // Bit 0 is monday, 1 is tuesday ... 6 is sunday, bit 7 is action (0 == close, 1 == open)
+	uint8_t daysAndAction;
+    
+    uint8_t hour, min;
 } CurtainSchedule;
 
-typedef struct SharedData {
-	uint8_t state;
-	bool running, direction;
-	
-	rtc_time currTime;
-	uint8_t currDay;
-	CurtainSchedule tempSchedule;
-} SharedData;
-
+/**
+ * Returns a 2 character day name of the give day of week number.
+ * @param dayOfWeek Number between 0 and 6 (Monday to Sunday)
+ * @return The 2 character name of the day, or "XX" if dayOfWeek isn't between 0 and 6.
+ */
 const char *DayOfWeekToStr(uint8_t dayOfWeek) {
 	switch(dayOfWeek) {
 		case 0:

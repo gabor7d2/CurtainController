@@ -1,33 +1,16 @@
-/*
- * serial.h
- *
- * Created: 2022. 05. 18. 1:07:41
- *  Author: gabor
- */
 
-//////////////////////////////////////////////////////////////////////////
-/// 
-/// Two-way serial communication module using UART0
-///
-/// Registers a custom stream for stdout, so that printf calls can be used
-/// to send messages directly through serial.
-///
-/// Call Serial_Init() before using this module.
-///
-//////////////////////////////////////////////////////////////////////////
+#define F_CPU 16000000
+#define __DELAY_BACKWARD_COMPATIBLE__
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#include <stdio.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "serial_controller.h"
+#include "task_scheduler.h"
 
 #ifndef F_CPU
 #error "F_CPU needs to be defined and set to the frequency of the CPU!"
 #endif
-
-#include <stdio.h>
-#include "task_scheduler.h"
-#include "utils.h"
-
-#define SERIAL_RECEIVE_BUFFER_SIZE 64
 
 //////////////////////////////////////////////////////////////////////////
 /// INIT
@@ -35,15 +18,16 @@
 
 int printf_putchar(char c, FILE *stream);
 
+bool process_received_chars(uint8_t id);
+
 static FILE mystdout = FDEV_SETUP_STREAM(printf_putchar, NULL, _FDEV_SETUP_WRITE);
 
-void (*line_received_handler)(uint8_t id, bool pressed);
+void (*line_received_handler)(char *line);
 
-/**
- * Initializes the serial communication, sets up USART0 to receive and send mode
- * and sets up stdout so that printf functions can write directly to serial.
- */
-void Serial_Init(uint16_t baud) {
+void Serial_Init(uint16_t baud, void (*handler)(char *line)) {
+    // store function pointer
+    line_received_handler = handler;
+
     // set baud rate
     uint16_t ubrr = F_CPU / 16 / baud - 1;
     UBRR0H = (uint8_t) (ubrr >> 8);
@@ -56,6 +40,12 @@ void Serial_Init(uint16_t baud) {
 
     // setup stdout
     stdout = &mystdout;
+    
+    // init task scheduler
+    TaskScheduler_Init();
+    
+    // start task for processing received chars and lines continuously
+    TaskScheduler_Schedule(100, 0, process_received_chars);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -65,6 +55,10 @@ void Serial_Init(uint16_t baud) {
 char recvBuf[SERIAL_RECEIVE_BUFFER_SIZE];
 uint8_t idxR0 = 0, idxR1 = 0;
 bool unread = false;
+
+char recvLine[SERIAL_RECEIVE_LINE_BUFFER_SIZE];
+uint8_t lineidx = 0;
+bool hasNewLine = false;
 
 /**
  * Interrupt vector to handle received bytes.
@@ -78,16 +72,10 @@ ISR(USART0_RX_vect) {
     }
 }
 
-/**
- * Gets if there is any unread data.
- */
 bool Serial_HasUnread() {
     return unread;
 }
 
-/**
- * Reads the first unread byte, or returns -1 if no unread data is available.
- */
 char Serial_Read() {
     if (idxR1 >= SERIAL_RECEIVE_BUFFER_SIZE) idxR1 = 0;
     if (unread) {
@@ -99,26 +87,48 @@ char Serial_Read() {
     }
 }
 
+/**
+ * Processes the received characters, and calls the function registered
+ * in Serial_Init() if an entire line has accumulated.
+ */
+bool process_received_chars(uint8_t id) {
+    while (Serial_HasUnread()) {
+        if (lineidx >= SERIAL_RECEIVE_LINE_BUFFER_SIZE) lineidx = 0;
+        char c = Serial_Read();
+        
+        // ignore CR
+        if (c == '\r') continue;
+        // detect LF and put a null-terminator into the array
+        if (c == '\n') {
+            hasNewLine = true;
+            recvLine[lineidx++] = '\0';
+            break;
+        }
+        recvLine[lineidx++] = c;
+    }
+
+    if (hasNewLine) {
+        line_received_handler(recvLine);
+        hasNewLine = false;
+        lineidx = 0;
+    }
+
+    // keep task running
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// DATA SEND
 //////////////////////////////////////////////////////////////////////////
 
-/**
- * Sends one byte of data through the serial port (UART0).
- * Waits until the port has finished sending the previous byte, and then sends it.
- */
 void Serial_PrintChar(char c) {
     // wait until USART data register becomes empty.
     while (bit_is_clear(UCSR0A, UDRE0));
     UDR0 = c;
 }
 
-/**
- * Sends a string through the serial port (UART0).
- * For long strings, this may take a while because it waits for each character to be sent over.
- */
 void Serial_PrintString(const char *str) {
-    while(*str) {
+    while (*str) {
         Serial_PrintChar(*str++);
     }
 }
@@ -128,5 +138,3 @@ int printf_putchar(char c, FILE *stream) {
     Serial_PrintChar(c);
     return c;
 }
-
-#endif /* SERIAL_H_ */

@@ -11,11 +11,21 @@
  * Original library written by Adafruit Industries. MIT license.
  */
 
+//////////////////////////////////////////////////////////////////////////
+///
+/// Real time clock module for communicating with DS3231 RTC
+///
+/// Keeps the current time in memory by requesting it every 500 ms from
+/// the RTC using TaskScheduler.
+///
+/// Call RTC_Init() before using this module.
+///
+//////////////////////////////////////////////////////////////////////////
+
 #ifndef __DS3231_H__
 #define __DS3231_H__
 
-#include <stdio.h>
-#include <avr/sfr_defs.h>
+#include "utils.h"
 
 #define RTC_WADDR 0b11010000
 #define RTC_RADDR 0b11010001
@@ -38,38 +48,29 @@ typedef struct rtc_date
 /*
  * Clock initialization
  */
-void rtc3231_init(void);
+void RTC_Init();
 
 /**
- * Reading time from clock
- * @time: time structure with reading data
+ * Gets the current date.
  */
-void rtc3231_read_time(struct rtc_time *time);
+rtc_date RTC_GetDate();
 
 /**
- * Reading date from clock
- * @date: date structure with reading data
+ * Gets the current time.
  */
-void rtc3231_read_date(struct rtc_date *date);
+rtc_time RTC_GetTime();
 
 /**
- * Reading date and time from clock
- * @time: time structure with reading data
- * @date: date structure with reading data
+ * Set date of RTC
+ * @param time The new date
  */
-void rtc3231_read_datetime(struct rtc_time *time, struct rtc_date *date);
+void RTC_SetDate(rtc_date *date);
 
 /**
- * Writing new time in clock
- * @time: time structure for writing data
+ * Set time of RTC
+ * @param time The new time
  */
-void rtc3231_write_time(struct rtc_time *time);
-
-/**
- * Writing new date in clock
- * @date: date structure for writing data
- */
-void rtc3231_write_date(struct rtc_date *date);
+void RTC_SetTime(rtc_time *time);
 
 
 #endif

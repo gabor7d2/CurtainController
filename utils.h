@@ -15,15 +15,23 @@
 
 #define clear_bit(sfr, bit) (sfr &= ~(_BV(bit)))
 
+typedef enum CurtainAction {
+    OPEN, CLOSE, STOP
+} CurtainAction;
+
 /**
  * Stores a curtain closing/opening schedule.
  */
 typedef struct CurtainSchedule {
     // Bit 0 is monday, 1 is tuesday ... 6 is sunday, bit 7 is action (0 == close, 1 == open)
 	uint8_t daysAndAction;
-    
+    // hour and minute of schedule
     uint8_t hour, min;
 } CurtainSchedule;
+
+typedef struct CommonData {
+    
+} CommonData;
 
 /**
  * Returns a 2 character day name of the give day of week number.

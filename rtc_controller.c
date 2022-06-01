@@ -11,8 +11,9 @@
  * Original library written by Adafruit Industries. MIT license.
  */
 
-#include "rtc3231.h"
+#include "rtc_controller.h"
 #include "i2c.h"
+#include "task_scheduler.h"
 
 static unsigned char bcd (unsigned char data)
 {
@@ -42,8 +43,36 @@ static unsigned char bin(unsigned char dec)
 	return bcd;
 }
 
+bool update_time(uint8_t id);
+volatile rtc_date currDate;
+volatile rtc_time currTime;
 
-void rtc3231_init(void)
+/**
+ * Read date and time from RTC
+ * @param date structure to write data to
+ * @param time structure to write data to
+ */
+void rtc3231_read_datetime(volatile rtc_date *date, volatile rtc_time *time)
+{
+	i2c_start_condition();
+	i2c_send_byte(RTC_WADDR);
+	i2c_send_byte(0x00);
+	i2c_stop_condition();
+
+	i2c_start_condition();
+	i2c_send_byte(RTC_RADDR);
+	time->sec = bcd(i2c_recv_byte());
+	time->min = bcd(i2c_recv_byte());
+	time->hour = bcd(i2c_recv_byte());
+
+	date->wday = bcd(i2c_recv_byte());
+	date->day = bcd(i2c_recv_byte());
+	date->month = bcd(i2c_recv_byte());
+	date->year = bcd(i2c_recv_last_byte());
+	i2c_stop_condition();
+}
+
+void RTC_Init()
 {
 	i2c_init(400);
 	i2c_start_condition();
@@ -52,64 +81,37 @@ void rtc3231_init(void)
 	i2c_send_byte(0x20);
 	i2c_send_byte(0x08);
 	i2c_stop_condition();
+
+    rtc3231_read_datetime(&currDate, &currTime);
+
+    // init task scheduler
+    TaskScheduler_Init();
+
+    // start task which updates current time and date in ram every 500 ms
+    TaskScheduler_Schedule(255, 500, update_time);
 }
 
-void rtc3231_read_time(struct rtc_time *time)
+rtc_date RTC_GetDate() {
+    return currDate;
+}
+
+rtc_time RTC_GetTime() {
+    return currTime;
+}
+
+void RTC_SetDate(rtc_date *date)
 {
 	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
-	i2c_send_byte(0x00);
-	i2c_stop_condition();
-
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	time->sec = bcd(i2c_recv_byte());
-	time->min = bcd(i2c_recv_byte());
-	time->hour = bcd(i2c_recv_byte());
-	i2c_stop_condition();
+    i2c_send_byte(RTC_WADDR);
+    i2c_send_byte(0x03);
+    i2c_send_byte(bin(date->wday));
+    i2c_send_byte(bin(date->day));
+	i2c_send_byte(bin(date->month));
+	i2c_send_byte(bin(date->year));
+    i2c_stop_condition();
 }
 
-void rtc3231_read_date(struct rtc_date *date)
-{
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
-	i2c_send_byte(0x00);
-	i2c_stop_condition();
-
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	bcd(i2c_recv_byte());
-	bcd(i2c_recv_byte());
-	bcd(i2c_recv_byte());
-
-	date->wday = bcd(i2c_recv_byte());
-	date->day = bcd(i2c_recv_byte());
-	date->month = bcd(i2c_recv_byte());
-	date->year = bcd(i2c_recv_last_byte());
-	i2c_stop_condition();
-}
-
-void rtc3231_read_datetime(struct rtc_time *time, struct rtc_date *date)
-{
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
-	i2c_send_byte(0x00);
-	i2c_stop_condition();
-
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	time->sec = bcd(i2c_recv_byte());
-	time->min = bcd(i2c_recv_byte());
-	time->hour = bcd(i2c_recv_byte());
-
-	date->wday = bcd(i2c_recv_byte());
-	date->day = bcd(i2c_recv_byte());
-	date->month = bcd(i2c_recv_byte());
-	date->year = bcd(i2c_recv_last_byte());
-	i2c_stop_condition();
-}
-
-void rtc3231_write_time(struct rtc_time *time)
+void RTC_SetTime(rtc_time *time)
 {
     i2c_start_condition();
     i2c_send_byte(RTC_WADDR);
@@ -120,14 +122,9 @@ void rtc3231_write_time(struct rtc_time *time)
     i2c_stop_condition();
 }
 
-void rtc3231_write_date(struct rtc_date *date)
-{
-	i2c_start_condition();
-    i2c_send_byte(RTC_WADDR);
-    i2c_send_byte(0x03);
-    i2c_send_byte(bin(date->wday));
-    i2c_send_byte(bin(date->day));
-	i2c_send_byte(bin(date->month));
-	i2c_send_byte(bin(date->year));
-    i2c_stop_condition();
+bool update_time(uint8_t id) {
+    rtc3231_read_datetime(&currDate, &currTime);
+
+    // keep running
+    return true;
 }

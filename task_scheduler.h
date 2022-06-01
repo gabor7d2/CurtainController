@@ -1,5 +1,5 @@
 /*
- * scheduler.h
+ * task_scheduler.h
  *
  * Created: 2022. 05. 25. 23:35:53
  *  Author: gabor
@@ -12,24 +12,28 @@
 /// Schedule and deschedule tasks which run at the period you specify.
 /// A task consists of an id, a period and a function to call. A scheduled
 /// task's function will be called every 'period * 1 ms'. Thus, the smallest
-/// period is 1ms, and the largest is 65.535 s (> 1 min).
-/// The function receives the task id as it's first parameter and it should return a
+/// period is 1ms, and the largest is 65.535 s (> 1 min). If the period is
+/// set to 0, the task is called as soon as possible, which may be less than 1ms.
+///
+/// The called function receives the task id as it's first parameter and it should return a
 /// boolean that determines if the task should be kept running (0 == deactivate, 1 == keep running)
 ///
 /// Uses TIMER0 for queuing tasks.
 ///
-/// Call TaskScheduler_Init() before using this module.
+/// Call TaskScheduler_Init() before using, however, you can call this init
+/// as many times as you want, it will only ever run once.
 ///
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef SCHEDULER_H_
 #define SCHEDULER_H_
 
-#include <stdbool.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include "utils.h"
 
-#define SCHEDULER_POSSIBLE_TASKS 10
-#define SCHEDULER_TASK_QUEUE_SIZE 20
+#define SCHEDULER_POSSIBLE_TASKS 20
+#define SCHEDULER_TASK_QUEUE_SIZE 30
 
 /**
  * Struct to hold data of a task.
@@ -53,10 +57,17 @@ volatile uint8_t taskidx0 = 0, taskidx1 = 0;
 // counter for counting timer ticks.
 volatile uint16_t counter = 0;
 
+// whether the task scheduler is initialized
+volatile bool initialized = false;
+
 /**
  * Initializes the Task Scheduler, starting the timer and deactivating all tasks.
  */
 void TaskScheduler_Init() {
+    // only allow initializing once
+    if (initialized) return;
+    initialized = true;
+    
 	// Setup TIMER 0: 8-bit, count upto 250 with /64 prescaler = reset every 1 ms
 	TCCR0A = 0x2;			// Disconnect OC0A/OC0B pins, set WGM0[1:0] to 10
 	TCCR0B = 0b00000011;	// set WGM0[2] to 0 (count upto the value in OCR0A), set prescaler to 64
@@ -95,12 +106,14 @@ ISR(TIMER0_COMPA_vect) {
  * Schedule the specified task. Returns true if the task was scheduled,
  * and false if there was no room for the task.
  */
-bool TaskScheduler_Schedule(Task t) {
+bool TaskScheduler_Schedule(uint8_t id, uint16_t period, bool (*func)(uint8_t)) {
 	// search for the first task that is not active (id == 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
 		if (tasks[i].id == 255) {
-			tasks[i] = t;
+			tasks[i].id = id;
+			tasks[i].period = period;
+			tasks[i].func = func;
 			return true;
 		}
 	}

@@ -8,6 +8,9 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#define F_CPU 16000000
+#define __DELAY_BACKWARD_COMPATIBLE__
+
 #include <avr/sfr_defs.h>
 #include <stdbool.h>
 
@@ -38,24 +41,6 @@ typedef struct CommonData {
  * @param dayOfWeek Number between 0 and 6 (Monday to Sunday)
  * @return The 2 character name of the day, or "XX" if dayOfWeek isn't between 0 and 6.
  */
-const char *DayOfWeekToStr(uint8_t dayOfWeek) {
-	switch(dayOfWeek) {
-		case 0:
-			return "Mo";
-			case 1:
-			return "Tu";
-			case 2:
-			return "We";
-			case 3:
-			return "Th";
-			case 4:
-			return "Fr";
-			case 5:
-			return "Sa";
-			case 6:
-			return "Su";
-	}
-	return "XX";
-}
+const char *DayOfWeekToStr(uint8_t dayOfWeek);
 
 #endif /* UTILS_H_ */

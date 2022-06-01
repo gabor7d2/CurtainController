@@ -5,16 +5,15 @@
  *  Author: gabor
  */
 
-#define F_CPU 16000000
-#define __DELAY_BACKWARD_COMPATIBLE__
-
 //#include "utils.h"
 //#include <stdio.h>
 //#include <stdlib.h>
 //#include <errno.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
+#include "task_scheduler.h"
+#include "curtain_controller.h"
 //#include <util/delay.h>
-//#include <avr/interrupt.h>
 //#include <avr/eeprom.h>
 //#include <string.h>
 //#include "lcd_controller.h"
@@ -22,7 +21,6 @@
 //#include "serial_controller.h"
 //#include "button_controller.h"
 //#include "rtc_controller.h"
-//#include "task_scheduler.h"
 //#include "curtain_controller.h"
 
 //void close_curtains();
@@ -541,13 +539,21 @@
 //    }
 //}
 
+bool repeat(uint8_t id) {
+    LCD_PrintChar('a');
+    return true;
+}
+
 int main() {
     // main init
     TaskScheduler_Init();
+    //CurtainController_Init();
+    //LCD_Init();
+    //Motor_Init(50);
+    //Motor_Enable();
     CurtainController_Init();
 
-//    Task t = {.id = 2, .period = 1000, .func = request_time_from_rtc};
-//    TaskScheduler_Schedule(t);
+    //TaskScheduler_Schedule(1, 1000, repeat);
 
     // set reed switch pins as input
     clear_bit(DDRC, PC0);

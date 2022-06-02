@@ -1,7 +1,4 @@
 
-#define F_CPU 16000000
-#define __DELAY_BACKWARD_COMPATIBLE__
-
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>

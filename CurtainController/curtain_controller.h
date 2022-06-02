@@ -83,13 +83,20 @@ void CurtainController_DoCurtainAction(CurtainAction a) {
             Motor_Disable();
             break;
     }
+    // display the new state
     CurtainController_RefreshScreen();
 }
 
 void CurtainController_ButtonChangeHandler(uint8_t btnId, bool pressed) {
+    if (pressed) {
+        StartMeasure();
+    } else {
+        printf("%d\n", GetMeasurement());
+    }
+    
     if (Motor_IsEnabled()) {
+        // motor is running, override button change handling
         if (pressed) {
-            StartMeasure();
             switch (btnId) {
                 case 1:
                     CurtainController_DoCurtainAction(CLOSE);
@@ -101,18 +108,17 @@ void CurtainController_ButtonChangeHandler(uint8_t btnId, bool pressed) {
                     CurtainController_DoCurtainAction(OPEN);
                     break;
             }
-        } else {
-            printf("%d\n", GetMeasurement());
         }
     } else {
         // call menu button handler
         Menu_ButtonChangeHandler(btnId, pressed);
+        CurtainController_RefreshScreen();
     }
-    CurtainController_RefreshScreen();
 }
 
 void CurtainController_RefreshScreen() {
     if (Motor_IsEnabled()) {
+        // motor is running, override screen refresh
         if (direction) {
             LCD_PrintStringAt("OPENING...      ", 0, 0);
         } else {

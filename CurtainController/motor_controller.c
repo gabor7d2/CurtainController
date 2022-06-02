@@ -1,11 +1,7 @@
-
-#define F_CPU 16000000
-#define __DELAY_BACKWARD_COMPATIBLE__
-
+#include "motor_controller.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include "motor_controller.h"
 
 uint16_t timerSpeed = 37500;
 

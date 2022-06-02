@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 /// 
 /// Controller for 2x16 character LCD Display '1602A'
+/// https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
 /// https://www.openhacks.com/uploadsproductos/eone-1602a1.pdf
 ///
 /// Uses port bits 0-3 of the port specified below, and the specified 
@@ -18,8 +19,8 @@
 
 #define LCD_Dir		DDRB		// LCD data direction register
 #define LCD_Port	PORTB		// LCD data output register
-#define LCD_RS		PB5			// LCD register select pin
-#define LCD_EN		PB4 		// LCD enable pin
+#define LCD_RS		PB4			// LCD register select pin
+#define LCD_EN		PB5 		// LCD enable pin
 
 /**
  * Initializes the LCD panel, sets it to 4-bit, 2-line mode
@@ -30,12 +31,12 @@ void LCD_Init();
 /**
  * Sends a command to the LCD panel.
  */
-void LCD_SendCommand(unsigned char cmd);
+void LCD_SendCommand(uint8_t cmd);
 
 /**
  * Sets the position of the cursor on the LCD.
  */
-void LCD_SetCursorPos(char row, char column);
+void LCD_SetCursorPos(uint8_t row, uint8_t column);
 
 /**
  * Clears the LCD.
@@ -43,15 +44,20 @@ void LCD_SetCursorPos(char row, char column);
 void LCD_Clear();
 
 /**
+ * Writes an empty string to the LCD on the specified row.
+ */
+void LCD_ClearLine(uint8_t row);
+
+/**
  * Prints a character to the LCD panel.
  * The character will be displayed at the current cursor position.
  */
-void LCD_PrintChar(unsigned char data);
+void LCD_PrintChar(char data);
 
 /**
  * Prints a character to the LCD panel at the specified row and column positions.
  */
-void LCD_PrintCharAt(unsigned char data, char row, char column);
+void LCD_PrintCharAt(char data, uint8_t row, uint8_t column);
 
 /**
  * Prints a string to the LCD panel, each character one by one.
@@ -62,6 +68,6 @@ void LCD_PrintString(const char *str);
 /**
  * Prints a string to the LCD panel at the specified row and column positions.
  */
-void LCD_PrintStringAt(const char *str, char row, char column);
+void LCD_PrintStringAt(const char *str, uint8_t row, uint8_t column);
 
 #endif

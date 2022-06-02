@@ -8,7 +8,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#define F_CPU 16000000
+#define F_CPU 16000000UL
 #define __DELAY_BACKWARD_COMPATIBLE__
 
 #include <avr/sfr_defs.h>

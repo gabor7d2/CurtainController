@@ -3,7 +3,7 @@
 #include "task_scheduler.h"
 #include "rtc_controller.h"
 
-bool check_schedules(uint8_t id);
+void check_schedules(uint8_t id);
 
 CurtainSchedule schedules[POSSIBLE_CURTAIN_SCHEDULES];
 
@@ -36,7 +36,7 @@ void ScheduleManager_Init(void (*handler)(CurtainAction)) {
     TaskScheduler_Init();
     
     // start task that checks for current schedule status every 500 ms
-    TaskScheduler_Schedule(30, 500, check_schedules);
+    TaskScheduler_Schedule(250, 500, check_schedules);
 }
 
 uint8_t ScheduleManager_GetScheduleCount() {
@@ -109,7 +109,7 @@ void update_nearest_schedule() {
 /**
  * Gets called every 500 ms to check if a schedule is right now, and calls the curtain_action_handler if it is.
  */
-bool check_schedules(uint8_t id) {
+void check_schedules(uint8_t id) {
     update_nearest_schedule();
 
     rtc_date date = RTC_GetDate();
@@ -118,7 +118,4 @@ bool check_schedules(uint8_t id) {
     if (nearestSchedule.daysAndAction & (1 << date.wday) && nearestSchedule.hour == time.hour && nearestSchedule.min == time.min && time.sec == 0) {
         curtain_action_handler((nearestSchedule.daysAndAction & 0x80) ? OPEN : CLOSE);
     }
-
-    // keep running
-    return true;
 }

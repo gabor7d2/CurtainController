@@ -34,10 +34,23 @@ void TaskScheduler_Init() {
 	}
 }
 
+bool measureTime = false;
+
+uint8_t t0, t1;
+
+void StartMeasure() {
+	measureTime = true;
+}
+
+uint8_t GetMeasurement() {
+	return t1 - t0;
+}
+
 /**
 * Interrupt vector to queue due tasks, runs every 1 ms.
 */
 ISR(TIMER0_COMPA_vect) {
+	if (measureTime) t0 = TCNT0;
 	// go through all tasks that are active (id != 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
@@ -51,9 +64,13 @@ ISR(TIMER0_COMPA_vect) {
 		}
 	}
 	counter++;
+	if (measureTime) {
+		t1 = TCNT0;
+		measureTime = false;
+	}
 }
 
-bool TaskScheduler_Schedule(uint8_t id, uint16_t period, bool (*func)(uint8_t)) {
+bool TaskScheduler_Schedule(uint8_t id, uint16_t period, void (*func)(uint8_t)) {
 	// search for the first task that is not active (id == 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
@@ -82,9 +99,13 @@ void TaskScheduler_ProcessTasks() {
 	while (taskidx0 != taskidx1) {
 		if (taskidx1 >= SCHEDULER_TASK_QUEUE_SIZE) taskidx1 = 0;
         
-        // if the function of the task returns true, keep it scheduled, else deactivate it
-		bool ret = taskQueue[taskidx1]->func(taskQueue[taskidx1]->id);
-		if (!ret) taskQueue[taskidx1]->id = 255;
+        // call the tasks's function, if it is not deactivated (id != 255)
+		// the task might be deactivated after there are other copies of it
+		// on the queue (the time specified on the task has already elapsed
+		// multiple times while it's function has been running for example)
+		if (taskQueue[taskidx1]->id != 255) {
+			taskQueue[taskidx1]->func(taskQueue[taskidx1]->id);
+		}
 		taskidx1++;
 	}
     
@@ -92,8 +113,7 @@ void TaskScheduler_ProcessTasks() {
     for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
 		if (tasks[i].id != 255 && tasks[i].period == 0) {
-            bool ret = tasks[i].func(tasks[i].id);
-            if (!ret) tasks[i].id = 255;
+            tasks[i].func(tasks[i].id);
 		}
 	}
 }

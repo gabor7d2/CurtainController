@@ -23,17 +23,6 @@
 //#include "rtc_controller.h"
 //#include "curtain_controller.h"
 
-//void close_curtains();
-//
-//void open_curtains();
-//
-//void stop_curtains();
-//
-//uint8_t state = 0;
-//bool running = false, direction = false;
-//
-//rtc_time currTime;
-//uint8_t currDay;
 //CurtainSchedule tempSchedule;
 //
 //char line[20];
@@ -547,42 +536,15 @@ bool repeat(uint8_t id) {
 int main() {
     // main init
     TaskScheduler_Init();
-    //CurtainController_Init();
-    //LCD_Init();
-    //Motor_Init(50);
-    //Motor_Enable();
     CurtainController_Init();
 
     //TaskScheduler_Schedule(1, 1000, repeat);
 
-    // set reed switch pins as input
-    clear_bit(DDRC, PC0);
-    clear_bit(DDRC, PC1);
-    
-    // enable reed switch pullup resistors
-    set_bit(PORTC, PC0);
-    set_bit(PORTC, PC1);
-
     // enable global interrupts
     sei();
 
-//    Menu_Init();
-
     while (1) {
         TaskScheduler_ProcessTasks();
-
-//        if (bit_is_clear(PINC, PC0) && running && !direction) {
-//            stop_curtains();
-//        }
-//
-//        if (bit_is_clear(PINC, PC1) && running && direction) {
-//            stop_curtains();
-//        }
-//
-//        if (currTime.sec == 0 && currTime.hour == tempSchedule.hour && currTime.min == tempSchedule.min && (tempSchedule.daysAndAction & (1 << currDay))) {
-//            if (tempSchedule.daysAndAction & (1 << 7)) open_curtains();
-//            else close_curtains();
-//        }
     }
 }
 

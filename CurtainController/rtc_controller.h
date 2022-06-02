@@ -35,6 +35,7 @@ typedef struct rtc_time
 	uint8_t sec;
 	uint8_t min;
 	uint8_t hour;
+	uint8_t wday;
 } rtc_time;
 
 typedef struct rtc_date
@@ -64,13 +65,13 @@ rtc_time RTC_GetTime();
  * Set date of RTC
  * @param time The new date
  */
-void RTC_SetDate(rtc_date *date);
+void RTC_SetDate(rtc_date date);
 
 /**
  * Set time of RTC
  * @param time The new time
  */
-void RTC_SetTime(rtc_time *time);
+void RTC_SetTime(rtc_time time);
 
 
 #endif

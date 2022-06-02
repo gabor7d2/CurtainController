@@ -43,9 +43,65 @@ static unsigned char bin(unsigned char dec)
 	return bcd;
 }
 
-bool update_time(uint8_t id);
+void rtc3231_read_datetime(volatile rtc_date *date, volatile rtc_time *time);
+
+void update_time(uint8_t id);
 volatile rtc_date currDate;
 volatile rtc_time currTime;
+
+void RTC_Init()
+{
+	i2c_init(400);
+	i2c_start_condition();
+	i2c_send_byte(RTC_WADDR);
+	i2c_send_byte(0x0E);
+	i2c_send_byte(0x20);
+	i2c_send_byte(0x08);
+	i2c_stop_condition();
+
+	// initialize currDate and currTime
+    rtc3231_read_datetime(&currDate, &currTime);
+
+    // init task scheduler
+    TaskScheduler_Init();
+
+    // start task which updates current time and date in ram every 500 ms
+    TaskScheduler_Schedule(250, 500, update_time);
+}
+
+rtc_date RTC_GetDate() {
+    return currDate;
+}
+
+rtc_time RTC_GetTime() {
+    return currTime;
+}
+
+void RTC_SetDate(rtc_date date)
+{
+	i2c_start_condition();
+    i2c_send_byte(RTC_WADDR);
+    i2c_send_byte(0x03);
+    i2c_send_byte(bin(date.wday));
+    i2c_send_byte(bin(date.day));
+	i2c_send_byte(bin(date.month));
+	i2c_send_byte(bin(date.year));
+    i2c_stop_condition();
+	currDate = date;
+}
+
+void RTC_SetTime(rtc_time time)
+{
+    i2c_start_condition();
+    i2c_send_byte(RTC_WADDR);
+    i2c_send_byte(0x00);
+    i2c_send_byte(bin(time.sec));
+	i2c_send_byte(bin(time.min));
+    i2c_send_byte(bin(time.hour));
+    i2c_send_byte(bin(time.wday));
+    i2c_stop_condition();
+	currTime = time;
+}
 
 /**
  * Read date and time from RTC
@@ -70,61 +126,10 @@ void rtc3231_read_datetime(volatile rtc_date *date, volatile rtc_time *time)
 	date->month = bcd(i2c_recv_byte());
 	date->year = bcd(i2c_recv_last_byte());
 	i2c_stop_condition();
+
+	time->wday = date->wday;
 }
 
-void RTC_Init()
-{
-	i2c_init(400);
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
-	i2c_send_byte(0x0E);
-	i2c_send_byte(0x20);
-	i2c_send_byte(0x08);
-	i2c_stop_condition();
-
+void update_time(uint8_t id) {
     rtc3231_read_datetime(&currDate, &currTime);
-
-    // init task scheduler
-    TaskScheduler_Init();
-
-    // start task which updates current time and date in ram every 500 ms
-    TaskScheduler_Schedule(255, 500, update_time);
-}
-
-rtc_date RTC_GetDate() {
-    return currDate;
-}
-
-rtc_time RTC_GetTime() {
-    return currTime;
-}
-
-void RTC_SetDate(rtc_date *date)
-{
-	i2c_start_condition();
-    i2c_send_byte(RTC_WADDR);
-    i2c_send_byte(0x03);
-    i2c_send_byte(bin(date->wday));
-    i2c_send_byte(bin(date->day));
-	i2c_send_byte(bin(date->month));
-	i2c_send_byte(bin(date->year));
-    i2c_stop_condition();
-}
-
-void RTC_SetTime(rtc_time *time)
-{
-    i2c_start_condition();
-    i2c_send_byte(RTC_WADDR);
-    i2c_send_byte(0x00);
-    i2c_send_byte(bin(time->sec));
-	i2c_send_byte(bin(time->min));
-    i2c_send_byte(bin(time->hour));
-    i2c_stop_condition();
-}
-
-bool update_time(uint8_t id) {
-    rtc3231_read_datetime(&currDate, &currTime);
-
-    // keep running
-    return true;
 }

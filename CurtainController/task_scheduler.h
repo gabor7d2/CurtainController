@@ -33,6 +33,10 @@
 #define SCHEDULER_POSSIBLE_TASKS 20
 #define SCHEDULER_TASK_QUEUE_SIZE 30
 
+void StartMeasure();
+
+uint8_t GetMeasurement();
+
 /**
  * Struct to hold data of a task.
  */
@@ -42,8 +46,7 @@ typedef struct Task {
     // Period of the task, the task will be run every period * 1ms, if 0, the task will be run as soon as possible
 	uint16_t period;
     // What function to call, the function receives the task id as a parameter
-    // and should return a boolean that determines if the task should be kept running (0 == deactivate, 1 == keep running)
-	bool (*func)(uint8_t);
+	void (*func)(uint8_t);
 } Task;
 
 /**
@@ -55,7 +58,7 @@ void TaskScheduler_Init();
  * Schedule the specified task. Returns true if the task was scheduled,
  * and false if there was no room for the task.
  */
-bool TaskScheduler_Schedule(uint8_t id, uint16_t period, bool (*func)(uint8_t));
+bool TaskScheduler_Schedule(uint8_t id, uint16_t period, void (*func)(uint8_t));
 
 /**
  * Deactivate the task(s) with the specified id.

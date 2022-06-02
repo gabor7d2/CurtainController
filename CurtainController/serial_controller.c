@@ -18,7 +18,7 @@
 
 int printf_putchar(char c, FILE *stream);
 
-bool process_received_chars(uint8_t id);
+void process_received_chars(uint8_t id);
 
 static FILE mystdout = FDEV_SETUP_STREAM(printf_putchar, NULL, _FDEV_SETUP_WRITE);
 
@@ -45,7 +45,7 @@ void Serial_Init(uint16_t baud, void (*handler)(char *line)) {
     TaskScheduler_Init();
     
     // start task for processing received chars and lines continuously
-    TaskScheduler_Schedule(100, 0, process_received_chars);
+    TaskScheduler_Schedule(250, 0, process_received_chars);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,7 @@ char Serial_Read() {
  * Processes the received characters, and calls the function registered
  * in Serial_Init() if an entire line has accumulated.
  */
-bool process_received_chars(uint8_t id) {
+void process_received_chars(uint8_t id) {
     while (Serial_HasUnread()) {
         if (lineidx >= SERIAL_RECEIVE_LINE_BUFFER_SIZE) lineidx = 0;
         char c = Serial_Read();
@@ -112,9 +112,6 @@ bool process_received_chars(uint8_t id) {
         hasNewLine = false;
         lineidx = 0;
     }
-
-    // keep task running
-    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////

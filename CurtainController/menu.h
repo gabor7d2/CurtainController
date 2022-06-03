@@ -13,10 +13,18 @@
 #include "lcd_controller.h"
 #include "rtc_controller.h"
 
+typedef enum Menu {
+    MAIN = 0,
+    OPTIONS = 1,
+    SCHEDULES = 10,
+    ADD_SCHEDULE = 11,
+    SET_TIME = 12
+} Menu;
+
 // tracking what menu the user is currently in
-uint8_t menuid = 0;
+uint8_t menu = 0;
 // tracking what element the user is currently at in the menu
-uint8_t elemid = 0;
+uint8_t elemidx = 0;
 
 rtc_time tempTime;
 
@@ -24,6 +32,7 @@ rtc_time tempTime;
 char line[20];
 
 void refresh_main_menu(uint8_t id);
+void Menu_RefreshScreen();
 
 void (*curtain_action_handler)(CurtainAction);
 
@@ -71,7 +80,7 @@ void display_set_time_menu();
 
 void rapid_time_edit(uint8_t id) {
     // if the current menu isn't set time menu, deactivate this task
-    if (menuid != 10) {
+    if (menu != 10) {
         TaskScheduler_Deschedule(id);
         return;
     }
@@ -86,9 +95,9 @@ void rapid_time_edit(uint8_t id) {
     }
 }
 
-void btn_chg_set_time_menu(uint8_t btnId, bool pressed) {
+void btn_chg_set_time_menu(ButtonChange chg) {
     // if button released
-    if (!pressed) {
+    if (!chg.press) {
         // deactivate potentially running rapid edits
         for (uint8_t i = 0; i < 8; i++)
             TaskScheduler_Deschedule(10 + i);
@@ -97,107 +106,110 @@ void btn_chg_set_time_menu(uint8_t btnId, bool pressed) {
     }
 
     // if middle btn pressed
-    if (btnId == 2) {
+    if (chg.btn == MIDDLE) {
         // go to the next value to edit
-        elemid++;
-        if (elemid == 3) {
+        elemidx++;
+        if (elemidx == 3) {
             // set new time
             RTC_SetTime(tempTime);
             // return to main menu
-            menuid = 0;
+            menu = 0;
         }
         return;
     }
 
     // if left or right btn pressed
-    switch (elemid) {
+    switch (elemidx) {
         case 0:
-            time_edit_hour(btnId == 3);
-            TaskScheduler_Schedule(btnId == 3 ? 11 : 10, 500, rapid_time_edit);
+            time_edit_hour(chg.btn == RIGHT);
+            TaskScheduler_Schedule(chg.btn == RIGHT ? 11 : 10, 500, rapid_time_edit);
             break;
         case 1:
-            time_edit_min(btnId == 3);
-            TaskScheduler_Schedule(btnId == 3 ? 13 : 12, 500, rapid_time_edit);
+            time_edit_min(chg.btn == RIGHT);
+            TaskScheduler_Schedule(chg.btn == RIGHT ? 13 : 12, 500, rapid_time_edit);
             break;
         case 2:
-            time_edit_day(btnId == 3);
+            time_edit_day(chg.btn == RIGHT);
             break;
     }
 }
 
-void btn_chg_schedules_menu(uint8_t btnId, bool pressed) {
+void btn_chg_schedules_menu(ButtonChange chg) {
     
 }
 
-void btn_chg_add_schedule_menu(uint8_t btnId, bool pressed) {
+void btn_chg_add_schedule_menu(ButtonChange chg) {
     
 }
 
-void btn_chg_options_menu(uint8_t btnId, bool pressed) {
-    if (menuid == 1 && pressed) {
-        switch (btnId) {
-            case 1:
-                if (elemid == 0) {
+void btn_chg_options_menu(ButtonChange chg) {
+    if (menu == 1 && chg.press) {
+        switch (chg.btn) {
+            case LEFT:
+                if (elemidx == 0) {
                     // return to main menu
-                    menuid = 0;
-                } else elemid--;
+                    menu = 0;
+                } else elemidx--;
                 break;
-            case 2:
+            case MIDDLE:
                 // enter option menu
-                menuid = 10 + elemid;
-                elemid = 0;
+                menu = 10 + elemidx;
+                elemidx = 0;
                 tempTime = RTC_GetTime();
                 tempTime.sec = 0;
                 break;
-            case 3:
-                if (elemid != 2) elemid++;
+            case RIGHT:
+                if (elemidx != 2) elemidx++;
                 break;
         }
     } else {
-        switch (menuid) {
+        switch (menu) {
             case 10:
-                btn_chg_set_time_menu(btnId, pressed);
+                btn_chg_set_time_menu(chg);
                 break;
             case 11:
-                btn_chg_schedules_menu(btnId, pressed);
+                btn_chg_schedules_menu(chg);
                 break;
             case 12:
-                btn_chg_add_schedule_menu(btnId, pressed);
+                btn_chg_add_schedule_menu(chg);
                 break;
         }
     }
 }
 
-void btn_chg_main_menu(uint8_t btnId, bool pressed) {
-    if (!pressed) return;
+void btn_chg_main_menu(ButtonChange chg) {
+    if (!chg.press) return;
 
-    switch (btnId) {
-        case 1:
+    switch (chg.btn) {
+        case LEFT:
             curtain_action_handler(CLOSE);
             break;
-        case 2:
-            menuid = 1;
-            elemid = 0;
+        case MIDDLE:
+            menu = 1;
+            elemidx = 0;
             break;
-        case 3:
+        case RIGHT:
             curtain_action_handler(OPEN);
             break;
     }
 }
 
-void Menu_ButtonChangeHandler(uint8_t btnId, bool pressed) {
-    if (menuid == 0) {
-        btn_chg_main_menu(btnId, pressed);
+void Menu_ButtonChangeHandler(ButtonChange chg) {
+    //if  (!chg.press) return;
+
+    if (menu == 0) {
+        btn_chg_main_menu(chg);
     } else {
-        btn_chg_options_menu(btnId, pressed);
+        btn_chg_options_menu(chg);
     }
+    Menu_RefreshScreen();
 }
 
 void display_set_time_menu() {
     LCD_PrintStringAt("    Set Time    ", 0, 0);
     sprintf(line, "-   %2d:%02d %s   +", tempTime.hour, tempTime.min, DayOfWeekToStr(tempTime.wday));
     LCD_PrintStringAt(line, 1, 0);
-    LCD_SetCursorPos(1, 5 + elemid * 3);
+    LCD_SetCursorPos(1, 5 + elemidx * 3);
 }
 
 void display_schedules_menu() {
@@ -209,8 +221,8 @@ void display_add_schedule_menu() {
 }
 
 void display_options_menu() {
-    if (menuid == 1) {
-        switch (elemid) {
+    if (menu == 1) {
+        switch (elemidx) {
             case 0:
                 LCD_PrintStringAt("<   Set Time   >", 0, 0);
                 break;
@@ -223,7 +235,7 @@ void display_options_menu() {
         }
         LCD_ClearLine(1);
     } else {
-        switch (menuid) {
+        switch (menu) {
             case 10:
                 display_set_time_menu();
                 break;
@@ -245,7 +257,7 @@ void display_main_menu() {
 }
 
 void Menu_RefreshScreen() {
-    if (menuid == 0) {
+    if (menu == 0) {
         // show main menu
         display_main_menu();
     } else {
@@ -255,7 +267,7 @@ void Menu_RefreshScreen() {
 }
 
 void refresh_main_menu(uint8_t id) {
-    if (!Motor_IsEnabled() && menuid == 0) {
+    if (!Motor_IsEnabled() && menu == 0) {
         display_main_menu();
     }
 }

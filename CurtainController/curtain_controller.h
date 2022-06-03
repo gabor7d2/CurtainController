@@ -19,29 +19,34 @@
 #include "schedule_manager.h"
 #include "menu.h"
 
-#define Sensor_Closed_RDir    DDRC
-#define Sensor_Closed_RPin    PINC
-#define Sensor_Closed_RPort   PORTC
-#define Sensor_Closed_Pin     PC0
+#define BAUD_RATE 9600
+#define MOTOR_SPEED_RPM 35
 
-#define Sensor_Open_RDir      DDRC
-#define Sensor_Open_RPin      PINC
-#define Sensor_Open_RPort     PORTC
-#define Sensor_Open_Pin       PC1
+// Curtain fully closed detector sensor (reed switch)
+#define Sensor_Closed_RDir    DDRC      // data direction register
+#define Sensor_Closed_RPin    PINC      // input pin register
+#define Sensor_Closed_RPort   PORTC     // output port register
+#define Sensor_Closed_Pin     PC0       // pin number
+
+// Curtain fully open detector sensor (reed switch)
+#define Sensor_Open_RDir      DDRC      // data direction register
+#define Sensor_Open_RPin      PINC      // input pin register
+#define Sensor_Open_RPort     PORTC     // output port register
+#define Sensor_Open_Pin       PC1       // pin number
 
 bool direction = false;
 bool sensorClosed = false, sensorOpen = false;
 
 void CurtainController_RefreshScreen();
-void CurtainController_ButtonChangeHandler(uint8_t btnId, bool pressed);
+void CurtainController_ButtonChangeHandler(ButtonChange chg);
 void CurtainController_DoCurtainAction(CurtainAction a);
 void process_serial_input(char *line);
 void check_reed_switches(uint8_t id);
 
 void CurtainController_Init() {
     Buttons_Init(CurtainController_ButtonChangeHandler);
-    Serial_Init(9600, process_serial_input);
-    Motor_Init(35);
+    Serial_Init(BAUD_RATE, process_serial_input);
+    Motor_Init(MOTOR_SPEED_RPM);
     RTC_Init();
     LCD_Init();
     ScheduleManager_Init(CurtainController_DoCurtainAction);
@@ -87,32 +92,32 @@ void CurtainController_DoCurtainAction(CurtainAction a) {
     CurtainController_RefreshScreen();
 }
 
-void CurtainController_ButtonChangeHandler(uint8_t btnId, bool pressed) {
-    if (pressed) {
+void CurtainController_ButtonChangeHandler(ButtonChange chg) {
+    if (chg.press) {
         StartMeasure();
-    } else {
+    }
+    if (chg.release) {
         printf("%d\n", GetMeasurement());
     }
     
     if (Motor_IsEnabled()) {
         // motor is running, override button change handling
-        if (pressed) {
-            switch (btnId) {
-                case 1:
+        if (chg.press) {
+            switch (chg.btn) {
+                case LEFT:
                     CurtainController_DoCurtainAction(CLOSE);
                     break;
-                case 2:
+                case MIDDLE:
                     CurtainController_DoCurtainAction(STOP);
                     break;
-                case 3:
+                case RIGHT:
                     CurtainController_DoCurtainAction(OPEN);
                     break;
             }
         }
     } else {
         // call menu button handler
-        Menu_ButtonChangeHandler(btnId, pressed);
-        CurtainController_RefreshScreen();
+        Menu_ButtonChangeHandler(chg);
     }
 }
 
@@ -125,14 +130,7 @@ void CurtainController_RefreshScreen() {
             LCD_PrintStringAt("CLOSING...      ", 0, 0);
         }
         LCD_PrintStringAt("\x7e\x7f    stop    \x7f\x7e", 1, 0);
-    } else {
-        // call menu refresh screen
-        Menu_RefreshScreen();
     }
-}
-
-void process_serial_input(char *line) {
-    printf("\nUnknown command.\n\n");
 }
 
 void check_reed_switches(uint8_t id) {
@@ -146,6 +144,10 @@ void check_reed_switches(uint8_t id) {
     if (sensorOpen && Motor_IsEnabled() && direction) {
         CurtainController_DoCurtainAction(STOP);
     }
+}
+
+void process_serial_input(char *line) {
+    printf("\nUnknown command.\n\n");
 }
 
 #endif /* CURTAIN_CONTROLLER_H_ */

@@ -98,7 +98,7 @@ void RTC_SetTime(rtc_time time)
     i2c_send_byte(bin(time.sec));
 	i2c_send_byte(bin(time.min));
     i2c_send_byte(bin(time.hour));
-    i2c_send_byte(bin(time.wday));
+    i2c_send_byte(bin(time.wday + 1));
     i2c_stop_condition();
 	currTime = time;
 }
@@ -127,7 +127,7 @@ void rtc3231_read_datetime(volatile rtc_date *date, volatile rtc_time *time)
 	date->year = bcd(i2c_recv_last_byte());
 	i2c_stop_condition();
 
-	time->wday = date->wday;
+	time->wday = date->wday - 1;
 }
 
 void update_time(uint8_t id) {

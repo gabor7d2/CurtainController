@@ -74,18 +74,22 @@ void CurtainController_DoCurtainAction(CurtainAction a) {
     switch (a) {
         case CLOSE:
             if (sensorClosed) break;
+            Buttons_IgnoreAllBtnChanges();
             direction = false;
             Motor_SetDir(false);
             Motor_Enable();
             break;
         case OPEN:
             if (sensorOpen) break;
+            Buttons_IgnoreAllBtnChanges();
             direction = true;
             Motor_SetDir(true);
             Motor_Enable();
             break;
         case STOP:
+            Buttons_IgnoreAllBtnChanges();
             Motor_Disable();
+            Menu_RefreshScreen();
             break;
     }
     // display the new state
@@ -93,12 +97,15 @@ void CurtainController_DoCurtainAction(CurtainAction a) {
 }
 
 void CurtainController_ButtonChangeHandler(ButtonChange chg) {
-    if (chg.press) {
-        StartMeasure();
+    printf("btn %d %s\n", chg.btn, chg.press ? "press" : chg.release ? "release" : chg.repeat ? "repeat" : chg.longPress ? "long press" : "error");
+    /*if (chg.press) {
+        //StartMeasure();
+        StartMeasure2();
     }
     if (chg.release) {
-        printf("%d\n", GetMeasurement());
-    }
+        //printf("%d\n", GetMeasurement());
+        //printf("%d\n", GetMeasurement2());
+    }*/
     
     if (Motor_IsEnabled()) {
         // motor is running, override button change handling

@@ -8,9 +8,6 @@ volatile Task* volatile taskQueue[SCHEDULER_TASK_QUEUE_SIZE];
 // idx0 is for keeping track of the next free space in the taskQueue, idx1 is for keeping track which task is the next for processing
 volatile uint8_t taskidx0 = 0, taskidx1 = 0;
 
-// counter for counting timer ticks.
-volatile uint16_t counter = 0;
-
 // whether the task scheduler is initialized
 volatile bool initialized = false;
 
@@ -56,14 +53,14 @@ ISR(TIMER0_COMPA_vect) {
 	{
 		if (tasks[i].id != 255 && tasks[i].period != 0) {
 			// if the time specified in the task has elapsed
-			if (counter % tasks[i].period == 0) {
+			if (tasks[i].counter % tasks[i].period == 0) {
 				if (taskidx0 >= SCHEDULER_TASK_QUEUE_SIZE) taskidx0 = 0;
 				// add a pointer of the task to the queue
 				taskQueue[taskidx0++] = &tasks[i];
-			}
+				tasks[i].counter = 1;
+			} else tasks[i].counter++;
 		}
 	}
-	counter++;
 	if (measureTime) {
 		t1 = TCNT0;
 		measureTime = false;
@@ -77,6 +74,7 @@ bool TaskScheduler_Schedule(uint8_t id, uint16_t period, void (*func)(uint8_t)) 
 		if (tasks[i].id == 255) {
 			tasks[i].id = id;
 			tasks[i].period = period;
+			tasks[i].counter = 1;
 			tasks[i].func = func;
 			return true;
 		}

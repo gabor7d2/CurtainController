@@ -528,9 +528,8 @@
 //    }
 //}
 
-bool repeat(uint8_t id) {
+void repeat(uint8_t id) {
     LCD_PrintChar('a');
-    return true;
 }
 
 int main() {
@@ -538,7 +537,7 @@ int main() {
     TaskScheduler_Init();
     CurtainController_Init();
 
-    //TaskScheduler_Schedule(1, 1000, repeat);
+    //TaskScheduler_Schedule(100, 1000, repeat);
 
     // enable global interrupts
     sei();

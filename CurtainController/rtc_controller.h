@@ -32,17 +32,25 @@
 
 typedef struct rtc_time
 {
+	// seconds, between 0 and 59
 	uint8_t sec;
+	// minutes, between 0 and 59
 	uint8_t min;
+	// hours, between 0 and 23
 	uint8_t hour;
+	// day of week, between 0 and 6
 	uint8_t wday;
 } rtc_time;
 
 typedef struct rtc_date
 {
+	// day of week, between 1 and 7
 	uint8_t wday;
+	// day, between 1 and 31
 	uint8_t day;
+	// month, between 1 and 12
 	uint8_t month;
+	// year, between 0 and 99
 	uint8_t year;
 } rtc_date;
 

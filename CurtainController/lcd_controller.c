@@ -38,10 +38,10 @@ void LCD_SendCommand(uint8_t cmd)
 void LCD_SetCursorPos(uint8_t row, uint8_t column)
 {
 	// Set cursor position to the specified position
-	if (row == 0 && column<16)
-	LCD_SendCommand((column & 0x0F)|0x80);
-	else if (row == 1 && column<16)
-	LCD_SendCommand((column & 0x0F)|0xC0);
+	if (row == 0 && column < 32)
+		LCD_SendCommand((column & 0x1F) | 0x80);
+	else if (row == 1 && column < 32)
+		LCD_SendCommand((column & 0x1F) | 0xC0);
 }
 
 void LCD_Clear()

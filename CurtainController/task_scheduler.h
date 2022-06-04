@@ -45,6 +45,8 @@ typedef struct Task {
 	uint8_t id;
     // Period of the task, the task will be run every period * 1ms, if 0, the task will be run as soon as possible
 	uint16_t period;
+    // counter for counting ticks this task has been running for.
+	uint16_t counter;
     // What function to call, the function receives the task id as a parameter
 	void (*func)(uint8_t);
 } Task;

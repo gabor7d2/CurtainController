@@ -12,14 +12,14 @@ void Buttons_Init(void (*handler)(ButtonChange change)) {
     btn_change_handler = handler;
 
     // set pins as input
-    clear_bit(BTN1_RDir, BTN1_Pin);
-    clear_bit(BTN2_RDir, BTN2_Pin);
-    clear_bit(BTN3_RDir, BTN3_Pin);
+    clear_bit(BTN_RDir, BTN1_Pin);
+    clear_bit(BTN_RDir, BTN2_Pin);
+    clear_bit(BTN_RDir, BTN3_Pin);
 
     // activate internal pullup resistors (writing 1 to port bit activates it)
-    set_bit(BTN1_RPort, BTN1_Pin);
-    set_bit(BTN2_RPort, BTN2_Pin);
-    set_bit(BTN3_RPort, BTN3_Pin);
+    set_bit(BTN_RPort, BTN1_Pin);
+    set_bit(BTN_RPort, BTN2_Pin);
+    set_bit(BTN_RPort, BTN3_Pin);
     
     // init task scheduler
     TaskScheduler_Init();
@@ -32,15 +32,33 @@ void Buttons_Init(void (*handler)(ButtonChange change)) {
 }
 
 // latest state of buttons
-volatile bool btn1 = false, btn2 = false, btn3 = false;
+volatile bool btnStates[3];
 
 // measure how long the buttons have been pressed down for
-volatile uint8_t cntbtn1 = 0, cntbtn2 = 0, cntbtn3 = 0;
+volatile uint16_t btnCounters[3];
+
+// whether to ignore button changes unless a press occurs for the particular button
+volatile bool ignoreBtnChanges[3];
 
 volatile ButtonChange changeQueue[BTN_CHANGE_QUEUE_SIZE];
-uint8_t idx0 = 0, idx1 = 0;
+volatile uint8_t idx0 = 0, idx1 = 0;
+
+void Buttons_IgnoreBtnChanges(Button btn) {
+    ignoreBtnChanges[btn] = true;
+}
+
+void Buttons_IgnoreAllBtnChanges() {
+    Buttons_IgnoreBtnChanges(LEFT);
+    Buttons_IgnoreBtnChanges(MIDDLE);
+    Buttons_IgnoreBtnChanges(RIGHT);
+}
 
 void add_change_to_queue(Button btn, bool press, bool release, bool repeat, bool longPress) {
+    if (ignoreBtnChanges[btn]) {
+        if (press) ignoreBtnChanges[btn] = false;
+        else return;
+    }
+
     if (idx0 >= BTN_CHANGE_QUEUE_SIZE) idx0 = 0;
     changeQueue[idx0].btn = btn;
     changeQueue[idx0].press = press;
@@ -55,70 +73,31 @@ void add_change_to_queue(Button btn, bool press, bool release, bool repeat, bool
  * to update button states and add new changes to the queue
  */
 void update_button_states(uint8_t id) {
-    ////////////////////////////// BTN 1 ////////////////////////////////////
-    // check if button has changed externally
-    if (bit_is_clear(BTN1_RPin, BTN1_Pin) != btn1) {
-        btn1 = !btn1;
-        // add to queue
-        add_change_to_queue(LEFT, btn1, !btn1, false, false);
-    }
+    for (uint8_t i = 0; i < 3; i++) {
+        /*bool clear;
+        if (i == 0) clear = bit_is_clear(BTN_RPin, BTN1_Pin);
+        if (i == 1) clear = bit_is_clear(BTN_RPin, BTN2_Pin);
+        if (i == 2) clear = bit_is_clear(BTN_RPin, BTN3_Pin);*/
 
-    // increase counter if pressed down
-    if (btn1) cntbtn1++;
-    else cntbtn1 = 0;
+        if (bit_is_clear(BTN_RPin, BTN_Pin(i)) != btnStates[i]) {
+            btnStates[i] = !btnStates[i];
+            // add to queue
+            add_change_to_queue(i, btnStates[i], !btnStates[i], false, false);
+        }
 
-    // check if button needs to be repeated
-    if (cntbtn1 > BTN_REPEAT_THRESHOLD && (cntbtn1 - BTN_REPEAT_THRESHOLD) % BTN_REPEAT_INTERVAL == 0) {
-        add_change_to_queue(LEFT, false, false, true, false);
-    }
+        // increase counter if pressed down
+        if (btnStates[i]) btnCounters[i]++;
+        else btnCounters[i] = 0;
 
-    // check if button has reached long press threshold
-    if (cntbtn1 == BTN_LONG_PRESS_THRESHOLD) {
-        add_change_to_queue(LEFT, false, false, false, true);
-    }
+        // check if button needs to be repeated
+        if (btnCounters[i] > BTN_REPEAT_THRESHOLD && (btnCounters[i] - BTN_REPEAT_THRESHOLD) % BTN_REPEAT_INTERVAL == 0) {
+            add_change_to_queue(i, false, false, true, false);
+        }
 
-    ////////////////////////////// BTN 2 ////////////////////////////////////
-    // check if button has changed externally
-    if (bit_is_clear(BTN2_RPin, BTN2_Pin) != btn2) {
-        btn2 = !btn2;
-        // add to queue
-        add_change_to_queue(MIDDLE, btn2, !btn2, false, false);
-    }
-
-    // increase counter if pressed down
-    if (btn2) cntbtn2++;
-    else cntbtn2 = 0;
-
-    // check if button needs to be repeated
-    if (cntbtn2 > BTN_REPEAT_THRESHOLD && (cntbtn2 - BTN_REPEAT_THRESHOLD) % BTN_REPEAT_INTERVAL == 0) {
-        add_change_to_queue(MIDDLE, false, false, true, false);
-    }
-
-    // check if button has reached long press threshold
-    if (cntbtn2 == BTN_LONG_PRESS_THRESHOLD) {
-        add_change_to_queue(MIDDLE, false, false, false, true);
-    }
-
-    ////////////////////////////// BTN 3 ////////////////////////////////////
-    // check if button has changed externally
-    if (bit_is_clear(BTN3_RPin, BTN3_Pin) != btn3) {
-        btn3 = !btn3;
-        // add to queue
-        add_change_to_queue(RIGHT, btn3, !btn3, false, false);
-    }
-
-    // increase counter if pressed down
-    if (btn3) cntbtn3++;
-    else cntbtn3 = 0;
-
-    // check if button needs to be repeated
-    if (cntbtn3 > BTN_REPEAT_THRESHOLD && (cntbtn3 - BTN_REPEAT_THRESHOLD) % BTN_REPEAT_INTERVAL == 0) {
-        add_change_to_queue(RIGHT, false, false, true, false);
-    }
-
-    // check if button has reached long press threshold
-    if (cntbtn3 == BTN_LONG_PRESS_THRESHOLD) {
-        add_change_to_queue(RIGHT, false, false, false, true);
+        // check if button has reached long press threshold
+        if (btnCounters[i] == BTN_LONG_PRESS_THRESHOLD) {
+            add_change_to_queue(i, false, false, false, true);
+        }
     }
 }
 

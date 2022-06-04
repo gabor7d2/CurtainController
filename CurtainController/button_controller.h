@@ -23,20 +23,15 @@
 
 #include "utils.h"
 
-#define BTN1_RDir	DDRD		// Button 1 data direction register
-#define BTN1_RPin	PIND		// Button 1 input pin register
-#define BTN1_RPort	PORTD		// Button 1 output port register
+#define BTN_RDir	DDRD		// Buttons data direction register
+#define BTN_RPin	PIND		// Buttons input pin register
+#define BTN_RPort	PORTD		// Buttons output port register
+
 #define BTN1_Pin	PD7			// Button 1 pin
-
-#define BTN2_RDir	DDRD		// Button 2 data direction register
-#define BTN2_RPin	PIND		// Button 2 input pin register
-#define BTN2_RPort	PORTD		// Button 2 output port register
 #define BTN2_Pin	PD6			// Button 2 pin
-
-#define BTN3_RDir	DDRD		// Button 3 data direction register
-#define BTN3_RPin	PIND		// Button 3 input pin register
-#define BTN3_RPort	PORTD		// Button 3 output port register
 #define BTN3_Pin	PD5			// Button 3 pin
+
+#define BTN_Pin(x) (((x) == 0) ? BTN1_Pin : ((x) == 1) ? BTN2_Pin : BTN3_Pin)
 
 // How big should the button change queue be
 #define BTN_CHANGE_QUEUE_SIZE       10
@@ -44,9 +39,9 @@
 // How many pollings to wait before sending out repeat btn press events
 #define BTN_REPEAT_THRESHOLD        20
 // How many pollings between sending out repeat btn press events
-#define BTN_REPEAT_INTERVAL          5
+#define BTN_REPEAT_INTERVAL          4
 // How many pollings to wait before sending out long btn press event
-#define BTN_LONG_PRESS_THRESHOLD    60
+#define BTN_LONG_PRESS_THRESHOLD    50
 
 typedef enum Button {
     LEFT, MIDDLE, RIGHT
@@ -65,5 +60,15 @@ typedef struct ButtonChange {
  * that will be called on every button change.
  */
 void Buttons_Init(void (*handler)(ButtonChange change));
+
+/**
+ * Ignore any button changes of the specified button until a press occurs.
+ */
+void Buttons_IgnoreBtnChanges(Button btn);
+
+/**
+ * Ignore any button changes until a press occurs on the specific button.
+ */
+void Buttons_IgnoreAllBtnChanges();
 
 #endif /* BUTTONS_H_ */

@@ -120,7 +120,7 @@ void update_nearest_schedule() {
                 if (totalMin < currMin) totalMin += 10080;
             } else {
                 // if current sec is not 0 and totalMin == currMin, we want this
-                // to be the furthest schedule so that it will not show on the screen anymore.
+                // to be the furthest schedule so that it will not show on the screen anymore and not trigger curtain actions.
                 if (totalMin <= currMin) totalMin += 10080;
             }
 

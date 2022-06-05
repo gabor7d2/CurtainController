@@ -25,4 +25,18 @@ typedef enum CurtainAction {
     OPEN, CLOSE, STOP
 } CurtainAction;
 
+/**
+ * Returns a 2 character day name given the day of week number.
+ * @param dayOfWeek Number between 0 and 6 (Monday to Sunday)
+ * @return The 2 character name of the day, or "XX" if dayOfWeek isn't between 0 and 6.
+ */
+const char *day_name_short(uint8_t dayOfWeek);
+
+/**
+ * Returns a day name given the day of week number.
+ * @param dayOfWeek Number between 0 and 6 (Monday to Sunday)
+ * @return The full name of the day, or "Unknown" if dayOfWeek isn't between 0 and 6.
+ */
+const char *day_name(uint8_t dayOfWeek);
+
 #endif /* UTILS_H_ */

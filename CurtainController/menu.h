@@ -25,6 +25,7 @@ typedef enum Menu {
     MESSAGE = 30
 } Menu;
 
+
 // tracking what menu the user is currently in
 Menu menu = MAIN;
 // tracking what element the user is currently at in the menu
@@ -33,17 +34,23 @@ uint8_t elemidx = 0;
 // store previous menu when displaying message to be able to return to it
 Menu prevMenu = MAIN;
 
+
 // the time that is currently being edited
 rtc_time tempTime;
+
 // the schedule that is currently being edited
 CurtainSchedule tempSchedule;
+
 // the index of the schedule that is currently being edited, 255 if it is a new schedule to be added
 uint8_t tempScheduleIdx;
+
 
 // lcd sprintf buffer or first line of message
 char line[20];
 // second line of message
 char line2[20];
+
+bool showTimeColon = true;
 
 void refresh_main_menu(uint8_t id);
 void Menu_RefreshScreen();
@@ -69,11 +76,12 @@ void change_menu(Menu newMenu, uint8_t newElemIdx) {
 
 void clear_message(uint8_t id) {
     menu = prevMenu;
+    Buttons_IgnoreAllBtnChanges();
     TaskScheduler_Deschedule(id);
     Menu_RefreshScreen();
 }
 
-void show_message(const char* l1, const char *l2) {
+void show_message(const char* l1, const char *l2, uint16_t durationMs) {
     change_menu(MESSAGE, elemidx);
 
     if (l1 == NULL) strcpy(line, "                ");
@@ -82,7 +90,7 @@ void show_message(const char* l1, const char *l2) {
     if (l2 == NULL) strcpy(line2, "                ");
     else strcpy(line2, l2);
 
-    TaskScheduler_Schedule(50, 2000, clear_message);
+    TaskScheduler_Schedule(50, durationMs, clear_message);
 }
 
 void edit_value_with_rollover(uint8_t *value, uint8_t max, bool increase) {
@@ -127,8 +135,8 @@ bool btn_handler_options_menu(ButtonChange chg) {
             // if current option is 'add schedule'
             if (elemidx == 1) {
                 //show error msg if schedule manager is full
-                if (ScheduleManager_GetCount() == POSSIBLE_CURTAIN_SCHEDULES) {
-                    show_message("Limit reached   ", NULL);
+                if (ScheduleManager_GetCount() >= POSSIBLE_CURTAIN_SCHEDULES) {
+                    show_message("Limit reached   ", NULL, 1500);
                     break;
                 }
                 // set temp variables
@@ -163,6 +171,7 @@ bool btn_handler_schedules_menu(ButtonChange chg) {
         if (elemidx > 0 && elemidx == ScheduleManager_GetCount()) elemidx--;
         // discard middle button changes so that schedule edit doesn't happen
         Buttons_IgnoreAllBtnChanges();
+        show_message("Deleted         ", NULL, 1000);
         return true;
     }
 
@@ -208,6 +217,13 @@ void schedule_editor_exit() {
         change_menu(MAIN, 0);
     } else {
         change_menu(SCHEDULES, tempScheduleIdx);
+    }
+
+    // show message
+    if (tempSchedule.daysAndAction & 0x7f) {
+        show_message("Saved           ", NULL, 1000);
+    } else {
+        show_message("Not saved:      ", "no day set      ", 2000);
     }
 }
 
@@ -295,7 +311,7 @@ bool btn_handler_set_time_menu(ButtonChange chg) {
 bool btn_handler_about_menu(ButtonChange chg) {
     // if any button pressed
     if (chg.press) {
-        change_menu(OPTIONS, elemidx);
+        change_menu(MAIN, 0);
         return true;
     }
 
@@ -328,31 +344,6 @@ void Menu_ButtonChangeHandler(ButtonChange chg) {
     if (refresh) Menu_RefreshScreen();
 }
 
-/**
- * Returns a 2 character day name given the day of week number.
- * @param dayOfWeek Number between 0 and 6 (Monday to Sunday)
- * @return The 2 character name of the day, or "XX" if dayOfWeek isn't between 0 and 6.
- */
-const char *day_name(uint8_t dayOfWeek) {
-    switch (dayOfWeek) {
-        case 0:
-            return "Mo";
-        case 1:
-            return "Tu";
-        case 2:
-            return "We";
-        case 3:
-            return "Th";
-        case 4:
-            return "Fr";
-        case 5:
-            return "Sa";
-        case 6:
-            return "Su";
-    }
-    return "XX";
-}
-
 void display_main_menu() {
     // display nearest schedule
     if (ScheduleManager_GetCount() > 0) {
@@ -363,13 +354,13 @@ void display_main_menu() {
         while (day < 7 && !(schedule.daysAndAction & (1 << day)))
             day++;
 
-        sprintf(line, "  @ %2d:%02d %s %s ", schedule.hour, schedule.min, day_name(day), (schedule.daysAndAction & 0x80) ? "\x7f\x7e" : "\x7e\x7f");
+        sprintf(line, "  @ %2d:%02d %s %s ", schedule.hour, schedule.min, day_name_short(day), (schedule.daysAndAction & 0x80) ? "\x7f\x7e" : "\x7e\x7f");
         LCD_PrintStringAt(line, 0, 0);
     } else LCD_PrintStringAt("No schedules    ", 0, 0);
 
     // display time
     rtc_time time = RTC_GetTime();
-    sprintf(line, "\x7e\x7f  %2d:%02d %s  \x7f\x7e", time.hour, time.min, day_name(time.wday));
+    sprintf(line, "\x7e\x7f  %2d%s%02d %s  \x7f\x7e", time.hour, showTimeColon ? ":" : " ", time.min, day_name_short(time.wday));
     LCD_PrintStringAt(line, 1, 0);
 }
 
@@ -436,7 +427,7 @@ void display_schedule_editor() {
 
 void display_set_time_menu() {
     LCD_PrintStringAt("    Set Time    ", 0, 0);
-    sprintf(line, "-   %2d:%02d %s   +", tempTime.hour, tempTime.min, day_name(tempTime.wday));
+    sprintf(line, "-   %2d:%02d %s   +", tempTime.hour, tempTime.min, day_name_short(tempTime.wday));
     LCD_PrintStringAt(line, 1, 0);
     // set cursor pos to the currently edited value
     LCD_SetCursorPos(1, 5 + elemidx * 3);
@@ -485,6 +476,7 @@ void Menu_RefreshScreen() {
 }
 
 void refresh_main_menu(uint8_t id) {
+    showTimeColon = !showTimeColon;
     if (!Motor_IsEnabled() && menu == MAIN) {
         display_main_menu();
     }

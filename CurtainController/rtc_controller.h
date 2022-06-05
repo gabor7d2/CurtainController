@@ -55,7 +55,7 @@ typedef struct rtc_date
 } rtc_date;
 
 /*
- * Clock initialization
+ * Clock initialization.
  */
 void RTC_Init();
 
@@ -70,13 +70,13 @@ rtc_date RTC_GetDate();
 rtc_time RTC_GetTime();
 
 /**
- * Set date of RTC
+ * Set date of RTC.
  * @param time The new date
  */
 void RTC_SetDate(rtc_date date);
 
 /**
- * Set time of RTC
+ * Set time of RTC.
  * @param time The new time
  */
 void RTC_SetTime(rtc_time time);

@@ -73,12 +73,9 @@ void add_change_to_queue(Button btn, bool press, bool release, bool repeat, bool
  * to update button states and add new changes to the queue
  */
 void update_button_states(uint8_t id) {
+    // go through the 3 buttons
     for (uint8_t i = 0; i < 3; i++) {
-        /*bool clear;
-        if (i == 0) clear = bit_is_clear(BTN_RPin, BTN1_Pin);
-        if (i == 1) clear = bit_is_clear(BTN_RPin, BTN2_Pin);
-        if (i == 2) clear = bit_is_clear(BTN_RPin, BTN3_Pin);*/
-
+        // check if stored state differs from live state
         if (bit_is_clear(BTN_RPin, BTN_Pin(i)) != btnStates[i]) {
             btnStates[i] = !btnStates[i];
             // add to queue

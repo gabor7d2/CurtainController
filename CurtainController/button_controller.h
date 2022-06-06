@@ -18,8 +18,8 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef BUTTONS_H_
-#define BUTTONS_H_
+#ifndef BUTTON_CONTROLLER_H_
+#define BUTTON_CONTROLLER_H_
 
 #include "utils.h"
 
@@ -71,4 +71,4 @@ void Buttons_IgnoreBtnChanges(Button btn);
  */
 void Buttons_IgnoreAllBtnChanges();
 
-#endif /* BUTTONS_H_ */
+#endif /* BUTTON_CONTROLLER_H_ */

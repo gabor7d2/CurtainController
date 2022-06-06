@@ -18,8 +18,8 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#ifndef SERIAL_CONTROLLER_H_
+#define SERIAL_CONTROLLER_H_
 
 #include "utils.h"
 
@@ -54,4 +54,4 @@ void Serial_PrintChar(char c);
  */
 void Serial_PrintString(const char *str);
 
-#endif /* SERIAL_H_ */
+#endif /* SERIAL_CONTROLLER_H_ */

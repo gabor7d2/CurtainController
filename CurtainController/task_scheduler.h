@@ -25,17 +25,13 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef SCHEDULER_H_
-#define SCHEDULER_H_
+#ifndef TASK_SCHEDULER_H_
+#define TASK_SCHEDULER_H_
 
 #include "utils.h"
 
 #define SCHEDULER_POSSIBLE_TASKS 20
 #define SCHEDULER_TASK_QUEUE_SIZE 30
-
-void StartMeasure();
-
-uint8_t GetMeasurement();
 
 /**
  * Struct to hold data of a task.
@@ -72,4 +68,4 @@ void TaskScheduler_Deschedule(uint8_t id);
  */
 void TaskScheduler_ProcessTasks();
 
-#endif /* SCHEDULER_H_ */
+#endif /* TASK_SCHEDULER_H_ */

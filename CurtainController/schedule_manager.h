@@ -24,16 +24,12 @@
 #include "utils.h"
 
 // how many curtain schedules can be scheduled
-#define POSSIBLE_CURTAIN_SCHEDULES 3
+#define POSSIBLE_CURTAIN_SCHEDULES 5
 
 #define EEPROM_UNIQUE_ID 0x4b                               // the unique id that identifies if we have previously stored data
 #define EEPROM_UNIQUE_ID_ADDR (uint8_t*) 0x10               // address of unique identifier
 #define EEPROM_SCHEDULE_COUNT_ADDR (uint8_t*) 0x11          // address of amount of schedules stored
 #define EEPROM_SCHEDULE_ARRAY_BASE_ADDR (uint8_t*) 0x12     // address of start of schedule array
-
-void StartMeasure2();
-
-uint8_t GetMeasurement2();
 
 /**
  * Stores a curtain closing/opening schedule.

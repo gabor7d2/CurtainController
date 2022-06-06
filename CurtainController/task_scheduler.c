@@ -1,6 +1,6 @@
+#include "task_scheduler.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "task_scheduler.h"
 
 volatile Task tasks[SCHEDULER_POSSIBLE_TASKS];
 volatile Task* volatile taskQueue[SCHEDULER_TASK_QUEUE_SIZE];
@@ -31,23 +31,10 @@ void TaskScheduler_Init() {
 	}
 }
 
-bool measureTime = false;
-
-uint8_t t0, t1;
-
-void StartMeasure() {
-	measureTime = true;
-}
-
-uint8_t GetMeasurement() {
-	return t1 - t0;
-}
-
 /**
 * Interrupt vector to queue due tasks, runs every 1 ms.
 */
 ISR(TIMER0_COMPA_vect) {
-	if (measureTime) t0 = TCNT0;
 	// go through all tasks that are active (id != 255)
 	for (uint8_t i = 0; i < SCHEDULER_POSSIBLE_TASKS; i++)
 	{
@@ -60,10 +47,6 @@ ISR(TIMER0_COMPA_vect) {
 				tasks[i].counter = 1;
 			} else tasks[i].counter++;
 		}
-	}
-	if (measureTime) {
-		t1 = TCNT0;
-		measureTime = false;
 	}
 }
 

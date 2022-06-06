@@ -22,8 +22,8 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef __DS3231_H__
-#define __DS3231_H__
+#ifndef RTC_CONTROLLER_H_
+#define RTC_CONTROLLER_H_
 
 #include "utils.h"
 
@@ -82,4 +82,4 @@ void RTC_SetDate(rtc_date date);
 void RTC_SetTime(rtc_time time);
 
 
-#endif
+#endif /* RTC_CONTROLLER_H_ */

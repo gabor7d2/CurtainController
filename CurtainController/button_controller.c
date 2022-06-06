@@ -1,5 +1,5 @@
-#include <avr/io.h>
 #include "button_controller.h"
+#include <avr/io.h>
 #include "task_scheduler.h"
 
 void update_button_states(uint8_t id);

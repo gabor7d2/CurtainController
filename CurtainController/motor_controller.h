@@ -22,8 +22,8 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef DRV8825_H
-#define DRV8825_H
+#ifndef MOTOR_CONTROLLER_H_
+#define MOTOR_CONTROLLER_H_
 
 #include "utils.h"
 
@@ -68,4 +68,4 @@ void Motor_ReverseDir();
 */
 void Motor_SetSpeed(double rpm);
 
-#endif
+#endif /* MOTOR_CONTROLLER_H_ */

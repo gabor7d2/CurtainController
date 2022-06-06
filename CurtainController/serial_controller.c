@@ -1,8 +1,7 @@
-
+#include "serial_controller.h"
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "serial_controller.h"
 #include "task_scheduler.h"
 
 #ifndef F_CPU

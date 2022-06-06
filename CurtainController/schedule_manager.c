@@ -1,8 +1,8 @@
-#include <avr/eeprom.h>
 #include "schedule_manager.h"
+#include <stdio.h>
+#include <avr/eeprom.h>
 #include "task_scheduler.h"
 #include "rtc_controller.h"
-#include <stdio.h>
 
 void check_schedules(uint8_t id);
 
@@ -134,24 +134,10 @@ void update_nearest_schedule() {
     }
 }
 
-bool measureTime2 = false;
-
-uint16_t t2, tf = 0;
-
-void StartMeasure2() {
-	measureTime2 = true;
-    tf = 0;
-}
-
-uint8_t GetMeasurement2() {
-	return tf;
-}
-
 /**
  * Gets called every 500 ms to check if a schedule is right now, and calls the curtain_action_handler if it is.
  */
 void check_schedules(uint8_t id) {
-    if (measureTime2) t2 = TCNT0;
     update_nearest_schedule();
 
     rtc_time time = RTC_GetTime();
@@ -159,10 +145,5 @@ void check_schedules(uint8_t id) {
     // check if nearest schedule's time matches current time
     if (nearestSchedule.daysAndAction & (1 << time.wday) && nearestSchedule.hour == time.hour && nearestSchedule.min == time.min) {
         curtain_action_handler((nearestSchedule.daysAndAction & 0x80) ? OPEN : CLOSE);
-    }
-    if (measureTime2) {
-        tf = TCNT0 - t2;
-        measureTime2 = false;
-        printf("hello\n");
     }
 }

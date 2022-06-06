@@ -12,8 +12,8 @@
 ///
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef DISPLAY_H
-#define DISPLAY_H
+#ifndef LCD_CONTROLLER_H_
+#define LCD_CONTROLLER_H_
 
 #include "utils.h"
 
@@ -70,4 +70,4 @@ void LCD_PrintString(const char *str);
  */
 void LCD_PrintStringAt(const char *str, uint8_t row, uint8_t column);
 
-#endif
+#endif /* LCD_CONTROLLER_H_ */
